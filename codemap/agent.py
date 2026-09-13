@@ -74,8 +74,9 @@ TOOLS = [
          {'project': PROJECT, 'source': string('Source ID or relative path.'), 'entity_id': string('Specific saved entity ID.'),
           'offset': integer(0, 0, 100000000), 'limit': integer(20, 1, 50),
           'revision': {'type': 'integer', 'minimum': 0}}, ['project'], read_only=True),
-    tool('prepare', 'Build and validate an immutable draft without recording analysis progress. Read guide topic preparation. Supply an empty batch_template from next, concise upserts and explicit result/reason. IDs, source hashes and existing record fields are filled by the tool. New evidence requires lines read on this MCP connection. Or supply prepared_id to inspect a saved draft.',
-         {'project': PROJECT, 'batch_template': {'type': 'object'}, 'upserts': {'type': 'object'},
+    tool('prepare', 'Build and validate an immutable draft without recording analysis progress. Use next.preparation_contract and guide topic preparation. Reviewed functions require six explicit details arrays: inputs, outputs, calls, reads, writes, conditions. result=done also requires every task scope node, including file/module nodes, reviewed/current. Errors list issues with exact fields and repair actions; fix them together and reread only requested missing ranges. IDs, source hashes and existing record fields are filled mechanically. Or supply prepared_id to inspect a saved draft.',
+         {'project': PROJECT, 'batch_template': {'type': 'object', 'description': 'Exact empty identity template from next; findings go in upserts, not inside this template.'},
+          'upserts': {'type': 'object', 'description': 'Tables of concise records. New records use key; existing records use id. Reviewed function/method details must include inputs, outputs, calls, reads, writes and conditions arrays. Missing/null differs from checked-empty []. Existing arrays/objects are replaced as a whole when supplied.'},
           'result': {'type': 'string', 'enum': ['partial', 'done', 'blocked']}, 'reason': string('Actual findings and remaining work.'),
           'new_tasks': {'type': 'array', 'items': {'type': 'object'}}, 'deletes': {'type': 'object'},
           'prepared_id': string('Saved draft to inspect instead of creating one.'), 'detail': DETAIL}, ['project'], idempotent=True),
@@ -172,8 +173,15 @@ class AgentTools:
         try:
             result = self._execute(name, args, store=store, span=span)
         except Exception as error:
+            from .diagnostics import ProtocolError, ValidationErrors, Issues
+            if name in ('prepare', 'commit') and isinstance(error, ProtocolError) and not isinstance(error, ValidationErrors):
+                issues = Issues()
+                issues.extend(error)
+                error = ValidationErrors(issues.rows, stage='protocol', count=issues.count,
+                                         categories=issues.categories,
+                                         pending=('checks dependent on the failed protocol requirement',))
             span.finish(error=error)
-            raise
+            raise error
         span.finish(result)
         return result
 
@@ -245,6 +253,9 @@ class AgentTools:
             return apply_update(store, expected_revision=args['expected_revision'], plan_id=args['plan_id'], renames=args.get('renames', ()))
         if name == 'next':
             claim = claim_view(claim_next(store, args['worker'], task_id=args.get('task_id'), lease_seconds=args.get('lease_seconds', 1800)), args.get('detail', 'summary'))
+            if claim['state'] == 'claimed':
+                from .diagnostics import preparation_contract
+                claim['preparation_contract'] = preparation_contract()
             if claim['state'] == 'claimed' and args.get('include_pack', True):
                 from .reading_pack import reading_pack
                 try:

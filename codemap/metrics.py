@@ -59,6 +59,9 @@ def manifest_hash(graph):
 def failure_kind(error):
     if error is None:
         return None
+    category = getattr(error, 'category', None)
+    if category in {'validation', 'evidence', 'source', 'lease', 'revision', 'mixed'}:
+        return category
     message = str(error).lower()
     for kind, words in [('revision', ('stale project revision', 'graph revision changed', 'plan changed')),
                         ('lease', ('lease', 'execution identity', '执行身份')),

@@ -54,7 +54,7 @@ window.Workbench={mount(options){
   const stamp=time=>new Date(time*1000).toLocaleString('zh-CN',{hour12:false});
   const phaseNames={inventory:'建立清单',structure:'本地结构解析',claim_pack:'领取与组包',material:'读取与搜索',query:'查询与复用',prepare:'准备与校验',commit:'提交成果',status:'状态与版本检查',control:'任务控制',update:'更新核对',other:'其他工具'};
   const toolNames={init:'初始化',index:'结构索引',next:'领取与组包',pack:'阅读包',read:'读取源码',search:'搜索',context:'复用核对',query:'查询',prepare:'准备提交',commit:'提交',status:'状态检查',task:'任务控制',update:'更新核对',canvas:'打开画布',export:'导出'};
-  const failureNames={revision:'版本变化',lease:'领取身份或有效期',source:'源码版本',evidence:'源码依据或分析深度',io:'文件读写',validation:'参数或结果校验',tool:'工具执行'};
+  const failureNames={revision:'版本变化',lease:'领取身份或有效期',source:'源码版本',evidence:'源码依据',mixed:'多类校验问题',io:'文件读写',validation:'字段或完成状态',tool:'工具执行'};
   const duration=ms=>ms==null?'未结束':ms<1000?Math.round(ms)+' ms':ms<60000?(ms/1000).toFixed(2)+' 秒':(ms/60000).toFixed(1)+' 分钟';
   const byteSize=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KiB':(n/1048576).toFixed(2)+' MiB';
   let metricsData=null,metricsSession='',metricsBusy=false;

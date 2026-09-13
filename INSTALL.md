@@ -92,6 +92,8 @@ python scripts/build_portable.py --output work/portable/repository-blueprint --z
 
 ## 其他 Agent
 
+准备批次的新版反馈同样适用于外部 MCP Agent：`blueprint_next` 附带 `preparation_contract`；`blueprint_prepare` 失败时返回 `issues`，包含节点、字段、当前值、期望和修复动作。请让宿主修正这些字段后再试，复用当前连接的已读源码；只有缺行或依据变化时才补读。独立新版包可先在旁边准备好，当前批次成功提交后再更改该 MCP 服务的入口并重连，继续原地图。
+
 新版 MCP 自动记录通用审阅耗时，画布入口为“Agent → 审阅耗时”，也可调用 `blueprint_metrics` 查询。正在运行的 WorkBuddy 或其他 Agent 应先提交完当前批次，再切换新版包并重连；旧进程不能热补统计。换连接继续使用原地图目录，无需重新初始化。统计口径、导出与对比条件见 [工作台指南](WORKBENCH.md#审阅耗时与基线)。
 
 模块阅读包通过通用 `blueprint_pack` 提供；`blueprint_next` 默认附带第一页。Agent 按返回的 `next_cursor` 继续，不必重复查询包里完整的记录或重读已提供的源码行。新接口无需额外安装依赖；更新包后重连 MCP，Codex 则在新任务中加载更新后的工具。

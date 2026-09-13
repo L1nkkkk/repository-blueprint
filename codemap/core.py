@@ -12,15 +12,13 @@ import math
 from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
+from .diagnostics import ProtocolError, review_issues
+
 
 CATALOG = json.loads(Path(__file__).with_name("node_kinds.json").read_text(encoding="utf-8"))
 TABLES = ("sources", "entities", "memberships", "contexts", "ports", "flows", "relations", "evidence", "tasks")
 DATA_RELATIONS = {"data", "read", "write"}
 CODE_RELATIONS = {"call", "control", "inherit", "implements", "reference", "event"}
-
-
-class ProtocolError(ValueError):
-    """An invalid graph, stale request, or unsafe state transition."""
 
 
 def require(condition, message):
@@ -92,6 +90,7 @@ def validate_graph(graph, source_root=None):
     require(type(project.get("inventory_complete")) is bool, "inventory_complete must be boolean")
     require(project.get("execution") in {"active", "paused"}, "invalid execution state")
     tables = {name: _records(graph, name) for name in TABLES}
+    review_issues(graph).raise_if_any('findings', pending=('graph references and remaining field checks', 'source disk checks when requested'))
     sources, entities, evidence = tables["sources"], tables["entities"], tables["evidence"]
     contexts, ports, flows = tables["contexts"], tables["ports"], tables["flows"]
     paths = set()
@@ -388,6 +387,8 @@ def apply_batch(graph, batch, *, now):
     result = batch.get("result")
     require(result in {"partial", "done", "blocked"}, "invalid batch result")
     require(isinstance(batch.get("reason"), str), "batch reason must be text")
+    review_issues(updated, task=task, result=result).raise_if_any('findings_and_completion',
+        pending=('graph references and remaining field checks', 'source disk checks'))
     if result != "done":
         require(nonempty(batch["reason"]), "unfinished work requires a continuation/blocking note")
     elif task["kind"] in {"analyze", "update"}:

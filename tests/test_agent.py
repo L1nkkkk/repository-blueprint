@@ -120,6 +120,30 @@ class AgentIntegrationTests(unittest.TestCase):
                              capture_output=True, encoding='utf-8', check=True, timeout=10)
         self.assertEqual(json.loads(cli.stdout)['summary']['calls'], data['summary']['calls'])
 
+    def test_packaged_prepare_reports_fields_and_reuses_pack_reading_after_repair(self):
+        claim = self.client.call('next', project=self.map, worker='external-agent')
+        self.assertIn('function_details_template', claim['preparation_contract'])
+        entity = claim['entities'][0]
+        upserts = {'sources': [{'source': '值.py', 'read_state': 'read', 'symbols_complete': True}],
+                   'evidence': [{'key': 'line', 'source': '值.py', 'start_line': 1, 'end_line': 1, 'note': 'Literal assignment.'}],
+                   'entities': [{'id': entity['id'], 'summary': 'Defines x as 1.', 'evidence_ids': ['$line']}]}
+        args = {'project': self.map, 'batch_template': claim['batch_template'], 'upserts': upserts,
+                'result': 'done', 'reason': 'Entire one-line module checked.'}
+        reply = self.client.rpc('tools/call', {'name': 'blueprint_prepare', 'arguments': args})
+        self.assertTrue(reply['isError'])
+        report = reply['structuredContent']
+        self.assertEqual(json.loads(reply['content'][0]['text']), report)
+        self.assertEqual(report['issues'][0]['field'], 'analysis')
+        self.assertEqual(report['issues'][0]['record_id'], entity['id'])
+        self.assertEqual(report['issues'][0]['source_paths'], ['值.py'])
+        self.assertEqual(report['categories'], ['validation'])
+        self.assertEqual(self.client.call('metrics', project=self.map)['summary']['errors'], 1)
+        # Source was already delivered in the claim's reading pack; no extra read.
+        upserts['entities'][0]['analysis'] = 'reviewed'
+        draft = self.client.call('prepare', **args)
+        committed = self.client.call('commit', project=self.map, prepared_id=draft['prepared_id'])
+        self.assertEqual(committed['coverage']['sources_read'], 1)
+
     def test_read_commit_idempotency_invalid_evidence_and_cross_session_reopen(self):
         claimed = self.client.call('next', project=self.map, worker='test-reader', detail='full')
         source = self.client.call('read', project=self.map, source='值.py')

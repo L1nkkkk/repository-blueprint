@@ -8,7 +8,7 @@ These helpers reduce repeated reading and JSON authoring. They preserve the enti
 2. Claim one task with `blueprint_next`. Keep the exact empty `batch_template`. Default task/source/entity lists are bounded, and entity summaries are NOT complete upserts. Fetch the full task using `blueprint_query(table="tasks", ids=[task_id])` when lists are truncated, then query its source/scope/review IDs in pages. Do not call next again to obtain more detail: it claims another task. `next(detail="full")` is available at initial acquisition.
 3. Read the `reading_pack` attached to the claim, then continue with `blueprint_pack(project, task_id, cursor=next_cursor)`. The pack groups actual source, structure, full saved records and pending work. Delivered complete lines need no duplicate read; complete records with `reuse="current_evidence"` need no duplicate full query. Follow gaps and structural continuation pointers. Use `blueprint_context`/query for material missing from the pack; a context summary still needs full details by ID. This checks only recorded dependencies, not new call sites or every runtime branch. See [reading packs](reading-pack.md).
 4. Fully read the current task's included files and enumerate declarations. Consult current saved callee/interface findings before rereading another file. Read precise ranges for new claims, changed interfaces or unresolved relations. Describe a document's role/content without auditing every implementation promise unless requested or a specific conflict warrants it. Preserve concrete required follow-ups for missing cross-file work. This never excuses omitting repository files or function-level details.
-5. Prepare concise findings, inspect the full draft if needed, and commit its ID. Continue the required queue. Read only needed guide sections; `guide.version` identifies identical content within a session.
+5. Check the `preparation_contract` attached to the claim, prepare concise findings, inspect the full draft if needed, and commit its ID. On a rejected draft, fix the listed independent issues together; retain this connection and its already read material. Continue the required queue. Read only needed guide sections; `guide.version` identifies identical content within a session.
 
 ## Draft contract
 
@@ -21,6 +21,51 @@ Call `blueprint_prepare(project, batch_template, upserts, result, reason, new_ta
 - Entities: name, kind, sources, responsibility and actual analysis status. New entities default to partial. Reviewed functions/methods require explicit details arrays for inputs, outputs, calls, reads, writes and conditions; the tool never invents empty semantic arrays. Language can come from sources; roles default empty and freshness current. Existing stale entities need explicit reconciliation/current evidence.
 - Contexts, ports, flows, relations, memberships: supply semantic fields from the graph format. IDs/references are mechanical. A new flow may omit color_key, but must specify its value version, producer and derivation. Multiple inputs remain independent values in their scenario context.
 - New tasks: key, kind, scope/source references, dependencies and concrete reason. Queued state, zero attempts, null lease and required=true are filled. Retirements use existing IDs and the original update-task restrictions.
+
+## Completion checklist and repair feedback
+
+For analyze/update tasks, `result="done"` requires **every task scope node** (including file/module nodes, not just newly described functions) to have `analysis="reviewed"` and `freshness="current"`. Every task source must have `read_state="read"`; source-category files also require `symbols_complete=true`. These flags are explicit findings, never an instruction to mark unfinished work done. Keep `result="partial"` with a concrete continuation reason when work remains.
+
+`next.preparation_contract.function_details_template` contains all six required keys with **null placeholders**. Fill every key from the actual reading before marking a function reviewed. Null/missing is unfinished; `[]` is an explicit verified absence. Supplying a details object replaces that object, so retain its other valid arrays when fixing one field.
+
+Prepare errors remain MCP `isError=true`. Their text is JSON, also provided as structuredContent to supported clients:
+
+```json
+{
+  "error": "validation_failed",
+  "stage": "findings_and_completion",
+  "issues": [
+    {"code": "function_details_array", "category": "validation", "record_name": "echo", "field": "details.conditions", "current": {"present": false}, "expected": "array", "action": "Fill from existing findings; [] only after verifying absence."},
+    {"code": "scope_analysis", "category": "validation", "record_name": "echo.py", "field": "analysis", "current": {"present": true, "type": "string", "value": "partial"}, "expected": "reviewed", "action": "Reconcile the required file node as well as its functions, or retain partial with remaining work."}
+  ]
+}
+```
+
+Read `field`, `current`, `expected`, source paths and `action`; repair findings already supported by the reading. When identifiable, `input_path` and `local_key` point back to the submitted record, including new records and same-name functions. A field/status error is not a demand to reread the repository. Reading errors identify `requires_read=true` and, when known, exact `missing_ranges`; read only those gaps on the same connection. Keep valid evidence IDs, fields and prepared drafts. Do not repeatedly send an unchanged rejected request.
+
+Independent finding, scope-state and source-reading problems are collected together when compilation permits it. Identity/reference errors stop dependent checks safely. Responses include `pending_checks`, `issue_count` and `truncated`; at most 40 issue details are returned. Fix the listed problems, then run prepare again to check the remaining dependencies. This is not a claim to diagnose every possible invalid graph in one pass. Rejection does not save a prepared draft or advance graph progress.
+
+## Complete function example
+
+Suppose `echo.py` is exactly `def echo(value):` followed by an indented `return value`, and both lines were returned on this connection. With the original empty batch_template and the actual file node ID from the claim, the concise findings are:
+
+```json
+{
+  "upserts": {
+    "sources": [{"key": "source", "source": "echo.py", "read_state": "read", "symbols_complete": true}],
+    "evidence": [{"key": "body", "source": "echo.py", "start_line": 1, "end_line": 2, "note": "Function returns its value parameter unchanged."}],
+    "entities": [
+      {"id": "actual-file-id-from-next", "key": "file", "analysis": "reviewed", "summary": "Defines echo(value), which returns its input.", "evidence_ids": ["$body"]},
+      {"key": "echo", "kind": "function", "name": "echo", "source_ids": ["$source"], "analysis": "reviewed", "summary": "Returns the supplied value unchanged.", "evidence_ids": ["$body"], "details": {"inputs": ["value"], "outputs": ["value"], "calls": [], "reads": ["value parameter"], "writes": [], "conditions": []}}
+    ],
+    "memberships": [{"key": "member", "parent_id": "$file", "child_id": "$echo", "axis": "semantic"}]
+  },
+  "result": "done",
+  "reason": "Both lines, the file summary and the function declaration have been reviewed."
+}
+```
+
+This example's empty arrays are justified by that specific two-line function. Do not copy them into findings for other functions without checking their behavior.
 
 ## One-line module example
 
