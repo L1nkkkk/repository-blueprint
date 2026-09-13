@@ -1,0 +1,17 @@
+{
+  "name": "repository-blueprint",
+  "version": "0.5.0",
+  "description": "让 Agent 分批阅读全仓库，把架构、调用关系和数据流保存为可追溯的代码蓝图。",
+  "author": {"name": "Local developer"},
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "代码蓝图",
+    "shortDescription": "从流程入口阅读仓库，追踪多份输入与后续数据。",
+    "longDescription": "包含通用阅读 Skill、标准 stdio MCP 图谱工具和蓝图画布。当前 Agent 或其他 MCP 宿主可接续同一地图；画布可生成接入配置与接续说明，也可使用本机 Codex 后台阅读。支持覆盖核对、移动关联和历史恢复。需要本地 Python 3.10 或更新版本；Codex 后台入口需已登录的本机 Codex。",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["用代码蓝图梳理这个仓库，保存架构、调用关系和数据流。", "继续这个代码蓝图工程中尚未完成的阅读任务。", "打开已保存的代码蓝图，追踪指定数据的来源和去向。"]
+  }
+}

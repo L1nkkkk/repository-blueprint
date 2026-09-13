@@ -1,0 +1,36 @@
+{
+  "version": "0.1",
+  "families": {
+    "container": {"label": "容器", "shape": "folder-tab"},
+    "file": {"label": "文件", "shape": "document"},
+    "scope": {"label": "作用域", "shape": "bracket-header"},
+    "type": {"label": "类型", "shape": "member-sections"},
+    "callable": {"label": "函数", "shape": "port-card"},
+    "data": {"label": "数据", "shape": "compact-rounded"},
+    "operation": {"label": "运算", "shape": "expression-card"},
+    "external": {"label": "外部边界", "shape": "dashed-boundary"},
+    "unknown": {"label": "待识别", "shape": "plain-card"}
+  },
+  "kinds": {
+    "repository": {"family": "container", "label": "仓库", "icon": "folder-git-2"},
+    "directory": {"family": "container", "label": "目录", "icon": "folder"},
+    "module": {"family": "container", "label": "模块", "icon": "component"},
+    "file": {"family": "file", "label": "文件", "icon": "file-code-2"},
+    "namespace": {"family": "scope", "label": "命名空间", "icon": "braces"},
+    "package": {"family": "scope", "label": "包", "icon": "package"},
+    "class": {"family": "type", "label": "类", "icon": "box"},
+    "struct": {"family": "type", "label": "结构体", "icon": "boxes"},
+    "interface": {"family": "type", "label": "接口", "icon": "puzzle"},
+    "enum": {"family": "type", "label": "枚举", "icon": "list"},
+    "function": {"family": "callable", "label": "函数", "icon": "square-function"},
+    "method": {"family": "callable", "label": "方法", "icon": "square-function"},
+    "field": {"family": "data", "label": "字段", "icon": "database"},
+    "parameter": {"family": "data", "label": "参数", "icon": "arrow-right-to-line"},
+    "variable": {"family": "data", "label": "变量", "icon": "variable"},
+    "value": {"family": "data", "label": "值版本", "icon": "circle-dot"},
+    "operation": {"family": "operation", "label": "运算", "icon": "calculator"},
+    "external": {"family": "external", "label": "外部接口", "icon": "plug"},
+    "unknown": {"family": "unknown", "label": "待识别", "icon": "circle-help"}
+  },
+  "roles": ["entry", "event", "test", "tool", "generated", "vendor", "public_api"]
+}

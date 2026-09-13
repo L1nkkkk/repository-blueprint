@@ -1,0 +1,1572 @@
+{
+  "contexts": [
+    {
+      "callee_id": null,
+      "caller_id": null,
+      "id": "ctx:main",
+      "parent_id": null
+    },
+    {
+      "callee_id": null,
+      "caller_id": null,
+      "id": "ctx:measure",
+      "parent_id": null
+    },
+    {
+      "callee_id": null,
+      "caller_id": null,
+      "id": "ctx:display",
+      "parent_id": null
+    },
+    {
+      "callee_id": "fn:move",
+      "caller_id": "fn:main",
+      "callsite_evidence_id": "ev:call-first",
+      "id": "ctx:move-1",
+      "parent_id": "ctx:main"
+    },
+    {
+      "callee_id": "fn:integrate",
+      "caller_id": "fn:move",
+      "callsite_evidence_id": "ev:move",
+      "id": "ctx:integrate-1",
+      "parent_id": "ctx:move-1"
+    },
+    {
+      "callee_id": "fn:move",
+      "caller_id": "fn:main",
+      "callsite_evidence_id": "ev:call-second",
+      "id": "ctx:move-2",
+      "parent_id": "ctx:main"
+    },
+    {
+      "callee_id": "fn:integrate",
+      "caller_id": "fn:move",
+      "callsite_evidence_id": "ev:move",
+      "id": "ctx:integrate-2",
+      "parent_id": "ctx:move-2"
+    }
+  ],
+  "entities": [
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:build"
+      ],
+      "freshness": "current",
+      "id": "directory:25a6634263c1b1f6fc4697a0",
+      "kind": "directory",
+      "language": "",
+      "name": "src",
+      "roles": [],
+      "source_ids": [],
+      "summary": "运动与独立诊断实现。诊断函数虽没有入口调用，仍已逐行阅读。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:build"
+      ],
+      "freshness": "current",
+      "id": "directory:59830ebc3a4184110566bf1a",
+      "kind": "directory",
+      "language": "",
+      "name": "tests",
+      "roles": [],
+      "source_ids": [],
+      "summary": "独立测试入口，包含连续两次调用和结果断言。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:build"
+      ],
+      "freshness": "current",
+      "id": "directory:f9d35d43770d39092a663e66",
+      "kind": "directory",
+      "language": "",
+      "name": "tools",
+      "roles": [],
+      "source_ids": [],
+      "summary": "单独构建的显示单位换算工具，已纳入全仓库范围。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:build"
+      ],
+      "freshness": "current",
+      "id": "file:1e7de1ae2d059d21e1dd75d5",
+      "kind": "file",
+      "language": "",
+      "name": "CMakeLists.txt",
+      "roles": [],
+      "source_ids": [
+        "source:1e7de1ae2d059d21e1dd75d5"
+      ],
+      "summary": "声明 motion_sample 可执行文件及 report_tool 对象库；运动实现由测试直接包含，避免重复编译。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:test"
+      ],
+      "freshness": "current",
+      "id": "file:316fb6d8c45111f7941bd5db",
+      "kind": "file",
+      "language": "cpp",
+      "name": "test_motion.cpp",
+      "roles": [
+        "test"
+      ],
+      "source_ids": [
+        "source:316fb6d8c45111f7941bd5db"
+      ],
+      "summary": "测试入口：初始位置为 1，两次移动后按源码计算得到 4，随后断言。此结论来自源码推导，未声称实际运行。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:measure"
+      ],
+      "freshness": "current",
+      "id": "file:9e4d1de91a1ba979607dbc63",
+      "kind": "file",
+      "language": "cpp",
+      "name": "diagnostics.cpp",
+      "roles": [],
+      "source_ids": [
+        "source:9e4d1de91a1ba979607dbc63"
+      ],
+      "summary": "独立诊断模块，Measure 返回输入的平方。已核对全部样本，当前没有仓库内调用者。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:report"
+      ],
+      "freshness": "current",
+      "id": "file:d3924b46a5360ef62a54d039",
+      "kind": "file",
+      "language": "cpp",
+      "name": "report.cpp",
+      "roles": [
+        "tool"
+      ],
+      "source_ids": [
+        "source:d3924b46a5360ef62a54d039"
+      ],
+      "summary": "独立工具代码，DisplayUnits 将厘米换算为显示单位；当前没有仓库内调用者。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:motion"
+      ],
+      "freshness": "current",
+      "id": "file:e9ebfc3f7e2cbd984fec7ce5",
+      "kind": "file",
+      "language": "cpp",
+      "name": "motion.cpp",
+      "roles": [],
+      "source_ids": [
+        "source:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "summary": "定义位置状态与运动系统。Move 读取位置，调用 IntegratePosition，再将结果写回传入的 State。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:build"
+      ],
+      "freshness": "current",
+      "id": "repository:cdb4ee2aea69cc6a83331bbe",
+      "kind": "repository",
+      "language": "",
+      "name": "sample_repo",
+      "roles": [],
+      "source_ids": [],
+      "summary": "小型 C++ 仓库，包含运动实现、诊断、测试与工具。全仓库五个文件均已核对；标准库 assert 保留外部边界。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:measure"
+      ],
+      "freshness": "current",
+      "id": "scope:diagnostics",
+      "kind": "namespace",
+      "language": "cpp",
+      "name": "diagnostics",
+      "roles": [],
+      "source_ids": [
+        "source:9e4d1de91a1ba979607dbc63"
+      ],
+      "summary": "诊断代码的独立语义分组。"
+    },
+    {
+      "analysis": "reviewed",
+      "details": {
+        "calls": [],
+        "conditions": [],
+        "inputs": [
+          "value: float"
+        ],
+        "outputs": [
+          "float: value 的平方"
+        ],
+        "reads": [],
+        "writes": []
+      },
+      "evidence_ids": [
+        "ev:measure"
+      ],
+      "freshness": "current",
+      "id": "fn:measure",
+      "kind": "function",
+      "language": "cpp",
+      "name": "Measure",
+      "roles": [],
+      "source_ids": [
+        "source:9e4d1de91a1ba979607dbc63"
+      ],
+      "summary": "返回 value * value，无副作用。当前完整样本内没有调用点；输入域为任意 float，未声明额外边界保证。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:motion"
+      ],
+      "freshness": "current",
+      "id": "scope:motion",
+      "kind": "namespace",
+      "language": "cpp",
+      "name": "motion",
+      "roles": [],
+      "source_ids": [
+        "source:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "summary": "位置状态和运动计算的语义分组。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:field"
+      ],
+      "freshness": "current",
+      "id": "type:state",
+      "kind": "struct",
+      "language": "cpp",
+      "name": "State",
+      "roles": [],
+      "source_ids": [
+        "source:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "summary": "保存可写的位置值。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:field"
+      ],
+      "freshness": "current",
+      "id": "field:position",
+      "kind": "field",
+      "language": "cpp",
+      "name": "State.position",
+      "roles": [],
+      "source_ids": [
+        "source:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "summary": "float 位置字段；Move 读取旧值并写入新的积分结果。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:motion"
+      ],
+      "freshness": "current",
+      "id": "type:movement",
+      "kind": "class",
+      "language": "cpp",
+      "name": "MovementSystem",
+      "roles": [],
+      "source_ids": [
+        "source:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "summary": "无自有字段的运动方法容器。状态通过引用参数传入。"
+    },
+    {
+      "analysis": "reviewed",
+      "details": {
+        "calls": [],
+        "conditions": [],
+        "inputs": [
+          "position: float",
+          "velocity: float",
+          "dt: float"
+        ],
+        "outputs": [
+          "float: position + velocity * dt"
+        ],
+        "reads": [],
+        "writes": []
+      },
+      "evidence_ids": [
+        "ev:integrate"
+      ],
+      "freshness": "current",
+      "id": "fn:integrate",
+      "kind": "function",
+      "language": "cpp",
+      "name": "IntegratePosition",
+      "roles": [],
+      "source_ids": [
+        "source:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "summary": "返回 position + velocity * dt；三个参数按值输入，无外部状态读写。"
+    },
+    {
+      "analysis": "reviewed",
+      "details": {
+        "calls": [
+          "IntegratePosition(state.position, velocity, dt)"
+        ],
+        "conditions": [],
+        "inputs": [
+          "velocity: float",
+          "dt: float",
+          "state: State&"
+        ],
+        "outputs": [
+          "state.position 的新值（引用写回）"
+        ],
+        "reads": [
+          "state.position 的调用前版本"
+        ],
+        "writes": [
+          "state.position = next"
+        ]
+      },
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "freshness": "current",
+      "id": "fn:move",
+      "kind": "method",
+      "language": "cpp",
+      "name": "Move",
+      "roles": [],
+      "source_ids": [
+        "source:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "summary": "将速度和时间传给积分函数，并把结果写回 state.position。返回类型为 void，数据结果通过引用状态传出。"
+    },
+    {
+      "analysis": "reviewed",
+      "details": {
+        "calls": [
+          "Move(2.0f, 0.5f, state) @ 第 7 行",
+          "Move(4.0f, 0.5f, state) @ 第 8 行",
+          "assert(state.position == 4.0f) @ 第 9 行（宏边界）"
+        ],
+        "conditions": [
+          "断言条件：state.position == 4.0f；NDEBUG 定义时断言可被移除"
+        ],
+        "inputs": [],
+        "outputs": [
+          "正常退出码 0；启用断言且条件失败时由外部断言机制终止"
+        ],
+        "reads": [
+          "第二次调用接收第一次写回的 state",
+          "断言读取最终 state.position"
+        ],
+        "writes": [
+          "初始化 state.position = 1.0f",
+          "两次 Move 的引用写回"
+        ]
+      },
+      "evidence_ids": [
+        "ev:test"
+      ],
+      "freshness": "current",
+      "id": "fn:main",
+      "kind": "function",
+      "language": "cpp",
+      "name": "main",
+      "roles": [
+        "entry",
+        "test"
+      ],
+      "source_ids": [
+        "source:316fb6d8c45111f7941bd5db"
+      ],
+      "summary": "先将 state.position 设为 1。第一次调用后位置为 2，第二次后为 4。两个调用共享同一 state，但使用不同的速度值。assert 受 NDEBUG 影响；main 正常结束隐式返回 0。"
+    },
+    {
+      "analysis": "reviewed",
+      "evidence_ids": [
+        "ev:report"
+      ],
+      "freshness": "current",
+      "id": "scope:reporting",
+      "kind": "namespace",
+      "language": "cpp",
+      "name": "reporting",
+      "roles": [
+        "tool"
+      ],
+      "source_ids": [
+        "source:d3924b46a5360ef62a54d039"
+      ],
+      "summary": "工具换算的语义分组。"
+    },
+    {
+      "analysis": "reviewed",
+      "details": {
+        "calls": [],
+        "conditions": [],
+        "inputs": [
+          "centimeters: float"
+        ],
+        "outputs": [
+          "float: centimeters / 100.0f"
+        ],
+        "reads": [],
+        "writes": []
+      },
+      "evidence_ids": [
+        "ev:report"
+      ],
+      "freshness": "current",
+      "id": "fn:display",
+      "kind": "function",
+      "language": "cpp",
+      "name": "DisplayUnits",
+      "roles": [
+        "tool"
+      ],
+      "source_ids": [
+        "source:d3924b46a5360ef62a54d039"
+      ],
+      "summary": "返回 centimeters / 100.0f，无外部状态或副作用；没有仓库内调用点。"
+    },
+    {
+      "analysis": "located",
+      "evidence_ids": [],
+      "freshness": "current",
+      "id": "external:assert",
+      "kind": "external",
+      "language": "",
+      "name": "assert / <cassert>",
+      "roles": [],
+      "source_ids": [],
+      "summary": "标准库断言宏边界。这里只记录源码引用和输入条件，不把宏展开虚构为普通函数调用。"
+    }
+  ],
+  "evidence": [
+    {
+      "end_line": 5,
+      "id": "ev:build",
+      "note": "构建入口、独立诊断编译单元与工具目标",
+      "sha256": "41e89b167a4ee37bd132046f9dc9a0538d5bcbb643fe83e7582977064f9239bc",
+      "source_id": "source:1e7de1ae2d059d21e1dd75d5",
+      "start_line": 1
+    },
+    {
+      "end_line": 5,
+      "id": "ev:measure",
+      "note": "独立诊断函数计算平方；仓库中没有对它的调用",
+      "sha256": "ba836010c3affcfaa071124959279a3f090769605e1959ab2f5fe40387f85680",
+      "source_id": "source:9e4d1de91a1ba979607dbc63",
+      "start_line": 1
+    },
+    {
+      "end_line": 15,
+      "id": "ev:motion",
+      "note": "运动命名空间、状态结构与方法实现",
+      "sha256": "8d423b6bb71bfde3c88b582a5ea790170c9d7f378e98c09f82e494eb13660ba3",
+      "source_id": "source:e9ebfc3f7e2cbd984fec7ce5",
+      "start_line": 1
+    },
+    {
+      "end_line": 6,
+      "id": "ev:integrate",
+      "note": "位置加速度乘时间的结果；函数无状态写入",
+      "sha256": "8d423b6bb71bfde3c88b582a5ea790170c9d7f378e98c09f82e494eb13660ba3",
+      "source_id": "source:e9ebfc3f7e2cbd984fec7ce5",
+      "start_line": 4
+    },
+    {
+      "end_line": 13,
+      "id": "ev:move",
+      "note": "读取旧位置，调用积分函数，写回同一 State 对象",
+      "sha256": "8d423b6bb71bfde3c88b582a5ea790170c9d7f378e98c09f82e494eb13660ba3",
+      "source_id": "source:e9ebfc3f7e2cbd984fec7ce5",
+      "start_line": 10
+    },
+    {
+      "end_line": 2,
+      "id": "ev:field",
+      "note": "State.position 字段声明",
+      "sha256": "8d423b6bb71bfde3c88b582a5ea790170c9d7f378e98c09f82e494eb13660ba3",
+      "source_id": "source:e9ebfc3f7e2cbd984fec7ce5",
+      "start_line": 2
+    },
+    {
+      "end_line": 10,
+      "id": "ev:test",
+      "note": "包含运动实现，初始化状态，连续调用两次并断言",
+      "sha256": "466281b6686fa757697f9ae20c031b0c1817357ad4e487daa3f1186dc486d5c0",
+      "source_id": "source:316fb6d8c45111f7941bd5db",
+      "start_line": 1
+    },
+    {
+      "end_line": 7,
+      "id": "ev:call-first",
+      "note": "第一次 Move 调用：2.0f、0.5f、同一个 state",
+      "sha256": "466281b6686fa757697f9ae20c031b0c1817357ad4e487daa3f1186dc486d5c0",
+      "source_id": "source:316fb6d8c45111f7941bd5db",
+      "start_line": 7
+    },
+    {
+      "end_line": 8,
+      "id": "ev:call-second",
+      "note": "第二次 Move 调用：4.0f、0.5f、第一次写回后的 state",
+      "sha256": "466281b6686fa757697f9ae20c031b0c1817357ad4e487daa3f1186dc486d5c0",
+      "source_id": "source:316fb6d8c45111f7941bd5db",
+      "start_line": 8
+    },
+    {
+      "end_line": 9,
+      "id": "ev:assert",
+      "note": "断言最终位置等于 4.0f；启用情况取决于 NDEBUG",
+      "sha256": "466281b6686fa757697f9ae20c031b0c1817357ad4e487daa3f1186dc486d5c0",
+      "source_id": "source:316fb6d8c45111f7941bd5db",
+      "start_line": 9
+    },
+    {
+      "end_line": 5,
+      "id": "ev:report",
+      "note": "独立工具函数将厘米除以 100 转为显示单位",
+      "sha256": "ffbedb2bfcbd99ee60a91522fb08b22f6fac3cf00e3fc385fb1c1b7c2fb3b577",
+      "source_id": "source:d3924b46a5360ef62a54d039",
+      "start_line": 1
+    }
+  ],
+  "flows": [
+    {
+      "color_key": "D1",
+      "derived_from": [],
+      "evidence_ids": [
+        "ev:test"
+      ],
+      "id": "flow:initial",
+      "name": "初始位置",
+      "producer_port_id": "p:ctx:main:fn:main:position-initial:out",
+      "value_version": "state#main.position@initial"
+    },
+    {
+      "color_key": "D2",
+      "derived_from": [],
+      "evidence_ids": [
+        "ev:call-first"
+      ],
+      "id": "flow:velocity-1",
+      "name": "速度 · 调用 1",
+      "producer_port_id": "p:ctx:main:fn:main:velocity-1:out",
+      "value_version": "literal-velocity@call1"
+    },
+    {
+      "color_key": "D3",
+      "derived_from": [],
+      "evidence_ids": [
+        "ev:call-first"
+      ],
+      "id": "flow:dt-1",
+      "name": "时间 · 调用 1",
+      "producer_port_id": "p:ctx:main:fn:main:dt-1:out",
+      "value_version": "literal-dt@call1"
+    },
+    {
+      "color_key": "D4",
+      "derived_from": [
+        "flow:initial",
+        "flow:velocity-1",
+        "flow:dt-1"
+      ],
+      "evidence_ids": [
+        "ev:integrate"
+      ],
+      "id": "flow:next-1",
+      "name": "新位置 · 调用 1",
+      "producer_port_id": "p:ctx:integrate-1:fn:integrate:result:out",
+      "value_version": "state#main.position@after-call1"
+    },
+    {
+      "color_key": "D5",
+      "derived_from": [],
+      "evidence_ids": [
+        "ev:call-second"
+      ],
+      "id": "flow:velocity-2",
+      "name": "速度 · 调用 2",
+      "producer_port_id": "p:ctx:main:fn:main:velocity-2:out",
+      "value_version": "literal-velocity@call2"
+    },
+    {
+      "color_key": "D6",
+      "derived_from": [],
+      "evidence_ids": [
+        "ev:call-second"
+      ],
+      "id": "flow:dt-2",
+      "name": "时间 · 调用 2",
+      "producer_port_id": "p:ctx:main:fn:main:dt-2:out",
+      "value_version": "literal-dt@call2"
+    },
+    {
+      "color_key": "D7",
+      "derived_from": [
+        "flow:next-1",
+        "flow:velocity-2",
+        "flow:dt-2"
+      ],
+      "evidence_ids": [
+        "ev:integrate"
+      ],
+      "id": "flow:next-2",
+      "name": "新位置 · 调用 2",
+      "producer_port_id": "p:ctx:integrate-2:fn:integrate:result:out",
+      "value_version": "state#main.position@after-call2"
+    }
+  ],
+  "format_version": "0.1",
+  "inventory": {
+    "empty_directories": [],
+    "excluded_paths": [],
+    "exclusion_patterns": [],
+    "gaps": [],
+    "policy": "whole-tree-v1"
+  },
+  "memberships": [
+    {
+      "axis": "physical",
+      "child_id": "directory:25a6634263c1b1f6fc4697a0",
+      "id": "member:25a6634263c1b1f6fc4697a0",
+      "parent_id": "repository:cdb4ee2aea69cc6a83331bbe"
+    },
+    {
+      "axis": "physical",
+      "child_id": "file:d3924b46a5360ef62a54d039",
+      "id": "member:52e6f8bb787a2958befb76b7",
+      "parent_id": "directory:f9d35d43770d39092a663e66"
+    },
+    {
+      "axis": "physical",
+      "child_id": "directory:59830ebc3a4184110566bf1a",
+      "id": "member:59830ebc3a4184110566bf1a",
+      "parent_id": "repository:cdb4ee2aea69cc6a83331bbe"
+    },
+    {
+      "axis": "physical",
+      "child_id": "file:1e7de1ae2d059d21e1dd75d5",
+      "id": "member:784bd93e2accb53be4bee076",
+      "parent_id": "repository:cdb4ee2aea69cc6a83331bbe"
+    },
+    {
+      "axis": "physical",
+      "child_id": "file:e9ebfc3f7e2cbd984fec7ce5",
+      "id": "member:88f193ee15e3c1610f9208d6",
+      "parent_id": "directory:25a6634263c1b1f6fc4697a0"
+    },
+    {
+      "axis": "physical",
+      "child_id": "file:9e4d1de91a1ba979607dbc63",
+      "id": "member:9ba94da9cb109cd4346bd199",
+      "parent_id": "directory:25a6634263c1b1f6fc4697a0"
+    },
+    {
+      "axis": "physical",
+      "child_id": "file:316fb6d8c45111f7941bd5db",
+      "id": "member:a7cfe9adbe74f4ae3c7bc9b4",
+      "parent_id": "directory:59830ebc3a4184110566bf1a"
+    },
+    {
+      "axis": "physical",
+      "child_id": "directory:f9d35d43770d39092a663e66",
+      "id": "member:f9d35d43770d39092a663e66",
+      "parent_id": "repository:cdb4ee2aea69cc6a83331bbe"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "scope:diagnostics",
+      "id": "member:scope:diagnostics",
+      "parent_id": "file:9e4d1de91a1ba979607dbc63"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "fn:measure",
+      "id": "member:fn:measure",
+      "parent_id": "scope:diagnostics"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "scope:motion",
+      "id": "member:scope:motion",
+      "parent_id": "file:e9ebfc3f7e2cbd984fec7ce5"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "type:state",
+      "id": "member:type:state",
+      "parent_id": "scope:motion"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "field:position",
+      "id": "member:field:position",
+      "parent_id": "type:state"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "type:movement",
+      "id": "member:type:movement",
+      "parent_id": "scope:motion"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "fn:integrate",
+      "id": "member:fn:integrate",
+      "parent_id": "scope:motion"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "fn:move",
+      "id": "member:fn:move",
+      "parent_id": "type:movement"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "fn:main",
+      "id": "member:fn:main",
+      "parent_id": "file:316fb6d8c45111f7941bd5db"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "scope:reporting",
+      "id": "member:scope:reporting",
+      "parent_id": "file:d3924b46a5360ef62a54d039"
+    },
+    {
+      "axis": "semantic",
+      "child_id": "fn:display",
+      "id": "member:fn:display",
+      "parent_id": "scope:reporting"
+    }
+  ],
+  "ports": [
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "out",
+      "entity_id": "fn:main",
+      "id": "p:ctx:main:fn:main:position-initial:out",
+      "name": "state.position = 1",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "out",
+      "entity_id": "fn:main",
+      "id": "p:ctx:main:fn:main:velocity-1:out",
+      "name": "velocity#1 = 2.0",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "out",
+      "entity_id": "fn:main",
+      "id": "p:ctx:main:fn:main:dt-1:out",
+      "name": "dt#1 = 0.5",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-1",
+      "direction": "in",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-1:fn:move:position:in",
+      "name": "position",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-1",
+      "direction": "out",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-1:fn:move:position:out",
+      "name": "position",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:integrate-1",
+      "direction": "in",
+      "entity_id": "fn:integrate",
+      "id": "p:ctx:integrate-1:fn:integrate:position:in",
+      "name": "position",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-1",
+      "direction": "in",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-1:fn:move:velocity:in",
+      "name": "velocity",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-1",
+      "direction": "out",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-1:fn:move:velocity:out",
+      "name": "velocity",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:integrate-1",
+      "direction": "in",
+      "entity_id": "fn:integrate",
+      "id": "p:ctx:integrate-1:fn:integrate:velocity:in",
+      "name": "velocity",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-1",
+      "direction": "in",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-1:fn:move:dt:in",
+      "name": "dt",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-1",
+      "direction": "out",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-1:fn:move:dt:out",
+      "name": "dt",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:integrate-1",
+      "direction": "in",
+      "entity_id": "fn:integrate",
+      "id": "p:ctx:integrate-1:fn:integrate:dt:in",
+      "name": "dt",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:integrate-1",
+      "direction": "out",
+      "entity_id": "fn:integrate",
+      "id": "p:ctx:integrate-1:fn:integrate:result:out",
+      "name": "position + velocity * dt",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-1",
+      "direction": "in",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-1:fn:move:next:in",
+      "name": "next",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-1",
+      "direction": "out",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-1:fn:move:written-position:out",
+      "name": "写回 state.position",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "in",
+      "entity_id": "fn:main",
+      "id": "p:ctx:main:fn:main:returned-1:in",
+      "name": "state.position@1",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "out",
+      "entity_id": "fn:main",
+      "id": "p:ctx:main:fn:main:position-1:out",
+      "name": "state.position@1",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "out",
+      "entity_id": "fn:main",
+      "id": "p:ctx:main:fn:main:velocity-2:out",
+      "name": "velocity#2 = 4.0",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "out",
+      "entity_id": "fn:main",
+      "id": "p:ctx:main:fn:main:dt-2:out",
+      "name": "dt#2 = 0.5",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-2",
+      "direction": "in",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-2:fn:move:position:in",
+      "name": "position",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-2",
+      "direction": "out",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-2:fn:move:position:out",
+      "name": "position",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:integrate-2",
+      "direction": "in",
+      "entity_id": "fn:integrate",
+      "id": "p:ctx:integrate-2:fn:integrate:position:in",
+      "name": "position",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-2",
+      "direction": "in",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-2:fn:move:velocity:in",
+      "name": "velocity",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-2",
+      "direction": "out",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-2:fn:move:velocity:out",
+      "name": "velocity",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:integrate-2",
+      "direction": "in",
+      "entity_id": "fn:integrate",
+      "id": "p:ctx:integrate-2:fn:integrate:velocity:in",
+      "name": "velocity",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-2",
+      "direction": "in",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-2:fn:move:dt:in",
+      "name": "dt",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-2",
+      "direction": "out",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-2:fn:move:dt:out",
+      "name": "dt",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:integrate-2",
+      "direction": "in",
+      "entity_id": "fn:integrate",
+      "id": "p:ctx:integrate-2:fn:integrate:dt:in",
+      "name": "dt",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:integrate-2",
+      "direction": "out",
+      "entity_id": "fn:integrate",
+      "id": "p:ctx:integrate-2:fn:integrate:result:out",
+      "name": "position + velocity * dt",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-2",
+      "direction": "in",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-2:fn:move:next:in",
+      "name": "next",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:move-2",
+      "direction": "out",
+      "entity_id": "fn:move",
+      "id": "p:ctx:move-2:fn:move:written-position:out",
+      "name": "写回 state.position",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "in",
+      "entity_id": "fn:main",
+      "id": "p:ctx:main:fn:main:returned-2:in",
+      "name": "state.position@2",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "out",
+      "entity_id": "fn:main",
+      "id": "p:ctx:main:fn:main:position-2:out",
+      "name": "state.position@2",
+      "type": "float"
+    },
+    {
+      "channel": "data",
+      "context_id": "ctx:main",
+      "direction": "in",
+      "entity_id": "external:assert",
+      "id": "p:ctx:main:external:assert:condition-position:in",
+      "name": "state.position == 4.0f",
+      "type": "float"
+    }
+  ],
+  "project": {
+    "execution": "active",
+    "id": "project:e02e9b53c4f28dc452caac5f",
+    "inventory_complete": true,
+    "mode": "whole_repository",
+    "name": "sample_repo",
+    "revision": 12,
+    "snapshot_id": "snapshot:036aa8435b9b81c13e18b67931dccdd96171986ca66332bc769e6a3db04055e6"
+  },
+  "receipts": {
+    "batch:2db72b25-82b1-4c98-97ac-96c7a6e37468": {
+      "digest": "3376f95d49896921b63e2b9cb768355374969b8b4539d56eb6dccbbae996ec0d",
+      "revision": 2
+    },
+    "batch:53c02782-6d71-44df-9326-35d0a2b0dce9": {
+      "digest": "04d452b5641d3589b0e7f47864a0a3cb3d1bb66fdf63613a4318a4322a208a8e",
+      "revision": 8
+    },
+    "batch:b4467478-5a30-436c-941d-0d39c69f61ad": {
+      "digest": "a09943f726fa26e681cfaab911c1aa4882916c9cc733e5a9443f4832fc630e2d",
+      "revision": 10
+    },
+    "batch:d135fced-54d0-45ec-91a7-d3ab7aa1534e": {
+      "digest": "41b22f2d96b98cd106b19accb390cc2c5bac98658275425f2f03a4faa27422ad",
+      "revision": 6
+    },
+    "batch:d41511a8-57ed-4c74-bf28-acff784406f3": {
+      "digest": "0350f6c46f9c27cdf257d381e831d32ba5261d656ad45b9da7fd322378b4dda6",
+      "revision": 12
+    },
+    "batch:f9655c7c-2f07-4fd3-9f82-f74079caff42": {
+      "digest": "145782250e7c6494d8c40168744927369b03139a0bb9132f3dbd9a827d094796",
+      "revision": 4
+    }
+  },
+  "relations": [
+    {
+      "basis": "source",
+      "context_id": "ctx:move-1",
+      "evidence_ids": [
+        "ev:call-first"
+      ],
+      "freshness": "current",
+      "from_id": "fn:main",
+      "id": "rel:0",
+      "kind": "call",
+      "to_id": "fn:move"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-1",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "freshness": "current",
+      "from_id": "fn:move",
+      "id": "rel:1",
+      "kind": "call",
+      "to_id": "fn:integrate"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:move-1",
+      "evidence_ids": [
+        "ev:call-first"
+      ],
+      "flow_id": "flow:initial",
+      "freshness": "current",
+      "from_id": "p:ctx:main:fn:main:position-initial:out",
+      "id": "rel:2",
+      "kind": "read",
+      "to_id": "p:ctx:move-1:fn:move:position:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-1",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "flow_id": "flow:initial",
+      "freshness": "current",
+      "from_id": "p:ctx:move-1:fn:move:position:out",
+      "id": "rel:3",
+      "kind": "data",
+      "to_id": "p:ctx:integrate-1:fn:integrate:position:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:move-1",
+      "evidence_ids": [
+        "ev:call-first"
+      ],
+      "flow_id": "flow:velocity-1",
+      "freshness": "current",
+      "from_id": "p:ctx:main:fn:main:velocity-1:out",
+      "id": "rel:4",
+      "kind": "data",
+      "to_id": "p:ctx:move-1:fn:move:velocity:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-1",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "flow_id": "flow:velocity-1",
+      "freshness": "current",
+      "from_id": "p:ctx:move-1:fn:move:velocity:out",
+      "id": "rel:5",
+      "kind": "data",
+      "to_id": "p:ctx:integrate-1:fn:integrate:velocity:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:move-1",
+      "evidence_ids": [
+        "ev:call-first"
+      ],
+      "flow_id": "flow:dt-1",
+      "freshness": "current",
+      "from_id": "p:ctx:main:fn:main:dt-1:out",
+      "id": "rel:6",
+      "kind": "data",
+      "to_id": "p:ctx:move-1:fn:move:dt:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-1",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "flow_id": "flow:dt-1",
+      "freshness": "current",
+      "from_id": "p:ctx:move-1:fn:move:dt:out",
+      "id": "rel:7",
+      "kind": "data",
+      "to_id": "p:ctx:integrate-1:fn:integrate:dt:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-1",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "flow_id": "flow:next-1",
+      "freshness": "current",
+      "from_id": "p:ctx:integrate-1:fn:integrate:result:out",
+      "id": "rel:8",
+      "kind": "data",
+      "to_id": "p:ctx:move-1:fn:move:next:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:move-1",
+      "evidence_ids": [
+        "ev:call-first"
+      ],
+      "flow_id": "flow:next-1",
+      "freshness": "current",
+      "from_id": "p:ctx:move-1:fn:move:written-position:out",
+      "id": "rel:9",
+      "kind": "write",
+      "to_id": "p:ctx:main:fn:main:returned-1:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:move-2",
+      "evidence_ids": [
+        "ev:call-second"
+      ],
+      "freshness": "current",
+      "from_id": "fn:main",
+      "id": "rel:10",
+      "kind": "call",
+      "to_id": "fn:move"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-2",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "freshness": "current",
+      "from_id": "fn:move",
+      "id": "rel:11",
+      "kind": "call",
+      "to_id": "fn:integrate"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:move-2",
+      "evidence_ids": [
+        "ev:call-second"
+      ],
+      "flow_id": "flow:next-1",
+      "freshness": "current",
+      "from_id": "p:ctx:main:fn:main:position-1:out",
+      "id": "rel:12",
+      "kind": "read",
+      "to_id": "p:ctx:move-2:fn:move:position:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-2",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "flow_id": "flow:next-1",
+      "freshness": "current",
+      "from_id": "p:ctx:move-2:fn:move:position:out",
+      "id": "rel:13",
+      "kind": "data",
+      "to_id": "p:ctx:integrate-2:fn:integrate:position:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:move-2",
+      "evidence_ids": [
+        "ev:call-second"
+      ],
+      "flow_id": "flow:velocity-2",
+      "freshness": "current",
+      "from_id": "p:ctx:main:fn:main:velocity-2:out",
+      "id": "rel:14",
+      "kind": "data",
+      "to_id": "p:ctx:move-2:fn:move:velocity:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-2",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "flow_id": "flow:velocity-2",
+      "freshness": "current",
+      "from_id": "p:ctx:move-2:fn:move:velocity:out",
+      "id": "rel:15",
+      "kind": "data",
+      "to_id": "p:ctx:integrate-2:fn:integrate:velocity:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:move-2",
+      "evidence_ids": [
+        "ev:call-second"
+      ],
+      "flow_id": "flow:dt-2",
+      "freshness": "current",
+      "from_id": "p:ctx:main:fn:main:dt-2:out",
+      "id": "rel:16",
+      "kind": "data",
+      "to_id": "p:ctx:move-2:fn:move:dt:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-2",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "flow_id": "flow:dt-2",
+      "freshness": "current",
+      "from_id": "p:ctx:move-2:fn:move:dt:out",
+      "id": "rel:17",
+      "kind": "data",
+      "to_id": "p:ctx:integrate-2:fn:integrate:dt:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:integrate-2",
+      "evidence_ids": [
+        "ev:move"
+      ],
+      "flow_id": "flow:next-2",
+      "freshness": "current",
+      "from_id": "p:ctx:integrate-2:fn:integrate:result:out",
+      "id": "rel:18",
+      "kind": "data",
+      "to_id": "p:ctx:move-2:fn:move:next:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:move-2",
+      "evidence_ids": [
+        "ev:call-second"
+      ],
+      "flow_id": "flow:next-2",
+      "freshness": "current",
+      "from_id": "p:ctx:move-2:fn:move:written-position:out",
+      "id": "rel:19",
+      "kind": "write",
+      "to_id": "p:ctx:main:fn:main:returned-2:in"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:main",
+      "evidence_ids": [
+        "ev:assert"
+      ],
+      "freshness": "current",
+      "from_id": "fn:main",
+      "id": "rel:20",
+      "kind": "reference",
+      "to_id": "external:assert"
+    },
+    {
+      "basis": "source",
+      "context_id": "ctx:main",
+      "evidence_ids": [
+        "ev:assert"
+      ],
+      "flow_id": "flow:next-2",
+      "freshness": "current",
+      "from_id": "p:ctx:main:fn:main:position-2:out",
+      "id": "rel:21",
+      "kind": "read",
+      "to_id": "p:ctx:main:external:assert:condition-position:in"
+    }
+  ],
+  "sources": [
+    {
+      "bytes": 252,
+      "category": "build",
+      "encoding": "utf-8",
+      "id": "source:1e7de1ae2d059d21e1dd75d5",
+      "included": true,
+      "language": "",
+      "path": "CMakeLists.txt",
+      "read_state": "read",
+      "reason": "",
+      "sha256": "41e89b167a4ee37bd132046f9dc9a0538d5bcbb643fe83e7582977064f9239bc",
+      "symbols_complete": true
+    },
+    {
+      "bytes": 83,
+      "category": "source",
+      "encoding": "utf-8",
+      "id": "source:9e4d1de91a1ba979607dbc63",
+      "included": true,
+      "language": "cpp",
+      "path": "src/diagnostics.cpp",
+      "read_state": "read",
+      "reason": "",
+      "sha256": "ba836010c3affcfaa071124959279a3f090769605e1959ab2f5fe40387f85680",
+      "symbols_complete": true
+    },
+    {
+      "bytes": 360,
+      "category": "source",
+      "encoding": "utf-8",
+      "id": "source:e9ebfc3f7e2cbd984fec7ce5",
+      "included": true,
+      "language": "cpp",
+      "path": "src/motion.cpp",
+      "read_state": "read",
+      "reason": "",
+      "sha256": "8d423b6bb71bfde3c88b582a5ea790170c9d7f378e98c09f82e494eb13660ba3",
+      "symbols_complete": true
+    },
+    {
+      "bytes": 244,
+      "category": "source",
+      "encoding": "utf-8",
+      "id": "source:316fb6d8c45111f7941bd5db",
+      "included": true,
+      "language": "cpp",
+      "path": "tests/test_motion.cpp",
+      "read_state": "read",
+      "reason": "",
+      "sha256": "466281b6686fa757697f9ae20c031b0c1817357ad4e487daa3f1186dc486d5c0",
+      "symbols_complete": true
+    },
+    {
+      "bytes": 99,
+      "category": "source",
+      "encoding": "utf-8",
+      "id": "source:d3924b46a5360ef62a54d039",
+      "included": true,
+      "language": "cpp",
+      "path": "tools/report.cpp",
+      "read_state": "read",
+      "reason": "",
+      "sha256": "ffbedb2bfcbd99ee60a91522fb08b22f6fac3cf00e3fc385fb1c1b7c2fb3b577",
+      "symbols_complete": true
+    }
+  ],
+  "tasks": [
+    {
+      "attempt": 1,
+      "depends_on": [],
+      "id": "task:1e7de1ae2d059d21e1dd75d5",
+      "kind": "analyze",
+      "lease": null,
+      "reason": "提交针对固定源码样本逐行核对的成果；这是既有阅读结果重放，不是通用自动分析。",
+      "required": true,
+      "scope_ids": [
+        "file:1e7de1ae2d059d21e1dd75d5"
+      ],
+      "source_ids": [
+        "source:1e7de1ae2d059d21e1dd75d5"
+      ],
+      "state": "done"
+    },
+    {
+      "attempt": 1,
+      "depends_on": [],
+      "id": "task:316fb6d8c45111f7941bd5db",
+      "kind": "analyze",
+      "lease": null,
+      "reason": "提交针对固定源码样本逐行核对的成果；这是既有阅读结果重放，不是通用自动分析。",
+      "required": true,
+      "scope_ids": [
+        "file:316fb6d8c45111f7941bd5db"
+      ],
+      "source_ids": [
+        "source:316fb6d8c45111f7941bd5db"
+      ],
+      "state": "done"
+    },
+    {
+      "attempt": 1,
+      "depends_on": [],
+      "id": "task:9e4d1de91a1ba979607dbc63",
+      "kind": "analyze",
+      "lease": null,
+      "reason": "提交针对固定源码样本逐行核对的成果；这是既有阅读结果重放，不是通用自动分析。",
+      "required": true,
+      "scope_ids": [
+        "file:9e4d1de91a1ba979607dbc63"
+      ],
+      "source_ids": [
+        "source:9e4d1de91a1ba979607dbc63"
+      ],
+      "state": "done"
+    },
+    {
+      "attempt": 1,
+      "depends_on": [],
+      "id": "task:d3924b46a5360ef62a54d039",
+      "kind": "analyze",
+      "lease": null,
+      "reason": "提交针对固定源码样本逐行核对的成果；这是既有阅读结果重放，不是通用自动分析。",
+      "required": true,
+      "scope_ids": [
+        "file:d3924b46a5360ef62a54d039"
+      ],
+      "source_ids": [
+        "source:d3924b46a5360ef62a54d039"
+      ],
+      "state": "done"
+    },
+    {
+      "attempt": 1,
+      "depends_on": [],
+      "id": "task:e9ebfc3f7e2cbd984fec7ce5",
+      "kind": "analyze",
+      "lease": null,
+      "reason": "提交针对固定源码样本逐行核对的成果；这是既有阅读结果重放，不是通用自动分析。",
+      "required": true,
+      "scope_ids": [
+        "file:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "source_ids": [
+        "source:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "state": "done"
+    },
+    {
+      "attempt": 1,
+      "depends_on": [
+        "task:1e7de1ae2d059d21e1dd75d5",
+        "task:316fb6d8c45111f7941bd5db",
+        "task:9e4d1de91a1ba979607dbc63",
+        "task:d3924b46a5360ef62a54d039",
+        "task:e9ebfc3f7e2cbd984fec7ce5"
+      ],
+      "id": "task:repository-review",
+      "kind": "link",
+      "lease": null,
+      "reason": "提交针对固定源码样本逐行核对的成果；这是既有阅读结果重放，不是通用自动分析。",
+      "required": true,
+      "scope_ids": [
+        "repository:cdb4ee2aea69cc6a83331bbe",
+        "directory:f9d35d43770d39092a663e66",
+        "directory:59830ebc3a4184110566bf1a",
+        "directory:25a6634263c1b1f6fc4697a0"
+      ],
+      "source_ids": [
+        "source:1e7de1ae2d059d21e1dd75d5",
+        "source:9e4d1de91a1ba979607dbc63",
+        "source:e9ebfc3f7e2cbd984fec7ce5",
+        "source:316fb6d8c45111f7941bd5db",
+        "source:d3924b46a5360ef62a54d039"
+      ],
+      "state": "done"
+    }
+  ]
+}

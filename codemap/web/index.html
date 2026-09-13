@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="system">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>代码蓝图 · 仓库阅读器</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/reader.css"><link rel="stylesheet" href="/workbench.css"><script src="/topology-model.js" defer></script><script src="/canvas-model.js" defer></script><script src="/workflow-model.js" defer></script><script src="/panel-layout.js" defer></script><script src="/workbench.js" defer></script><script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand"><span class="brand-icon">⌘</span><div><strong>代码蓝图</strong><span>REPOSITORY ATLAS</span></div></div>
+    <div class="project-title"><strong id="project-name">正在打开工程</strong><span id="project-meta">读取已保存的仓库图谱</span></div>
+    <div class="header-actions"><button id="toggle-files" class="files-toggle" aria-controls="files-panel" aria-expanded="true" aria-label="打开或收起文件面板">文件</button><button id="toggle-details" class="details-toggle" aria-controls="details-panel" aria-expanded="true" aria-label="打开或收起详情面板">详情</button><div class="theme" role="group" aria-label="主题"><button data-theme="light" aria-label="浅色主题">☀</button><button data-theme="dark" aria-label="深色主题">☾</button><button data-theme="system" aria-label="跟随系统主题">自动</button></div><button id="refresh">刷新成果 ↻</button></div>
+  </header>
+  <div id="notice" role="status" hidden></div>
+  <dialog id="changes-dialog" aria-labelledby="changes-title">
+    <div class="changes-heading"><h2 id="changes-title">代码变化与影响范围</h2><button id="changes-close" aria-label="关闭变化面板">关闭</button></div>
+    <div id="changes-content" aria-live="polite"></div>
+    <div class="changes-actions"><button id="changes-check">重新检查</button><button id="changes-apply" disabled>更新并加入重读队列</button></div>
+  </dialog>
+  <main class="workspace">
+    <aside id="files-panel" class="sidebar" aria-label="文件面板">
+      <div class="side-head"><span class="eyebrow">全仓库范围</span><span id="file-count" class="badge"></span><button id="close-files" class="panel-close" aria-label="收起文件面板" title="收起文件面板">‹</button></div>
+      <label class="search"><span>⌕</span><input id="search" type="search" placeholder="搜索文件、类或函数" aria-label="搜索文件、类或函数"></label>
+      <nav class="view-tabs" aria-label="阅读视图"><button data-mode="workflow">◉ 流程阅读</button><button data-mode="structure" class="active">▦ 仓库结构</button><button data-mode="topology">◇ 拓扑总览</button><button data-mode="relations">⌁ 关系核对</button></nav>
+      <div class="side-section"><span>文件清单</span><span id="file-shown"></span></div>
+      <div id="file-list" class="file-list"></div>
+      <details class="scope-details"><summary id="scope-summary">范围与读取限制</summary><div id="scope-content"></div></details>
+      <section class="structure-panel"><div class="side-section"><span>本地结构</span><button id="index-build" title="提取类、函数、参数和源码位置；复用未改动文件，不启动 Agent">解析结构</button></div><p id="index-progress" role="status">尚未解析</p><details><summary>解析范围与缺口</summary><div id="index-diagnostics"></div></details></section>
+      <section class="progress-panel"><div class="side-section"><span>梳理进度</span><span id="progress-number"></span></div><progress id="progress" max="1" value="0"></progress><p id="coverage"></p><div id="execution" class="execution"></div><details><summary>查看待办</summary><div id="task-list"></div></details></section>
+    </aside>
+    <div id="resize-files" class="panel-resizer" role="separator" tabindex="0" aria-label="调整文件面板宽度" aria-controls="files-panel" aria-orientation="vertical" title="拖动调宽 · 双击恢复默认宽度 · 方向键微调"></div>
+    <section class="canvas-shell" aria-label="代码画布">
+      <div class="canvas-toolbar"><div id="breadcrumbs" class="breadcrumbs"></div><div class="tools"><button id="home" aria-label="返回仓库全景">全景</button><button id="back" aria-label="返回上一层">←</button><label id="layer-label" hidden>关系 <select id="layer"><option value="data">数据流</option><option value="call">调用</option><option value="all">全部关系</option></select></label><button id="flow-motion" aria-pressed="true" title="沿数据方向播放示意箭头；不代表程序运行状态或真实耗时" hidden>暂停流动</button><button id="arrange" title="重排当前画布并重新布线；保留锁定节点，可撤销">一键整理</button><button id="undo-arrange" title="恢复整理前的节点、走线点和视角" hidden>撤销整理</button></div></div>
+      <div id="flow-navigation" class="flow-navigation" hidden><div class="flow-navigation-controls"><label>展示 <select id="presentation" aria-label="数据流展示方式"><option value="scoped">按调用逐层展开</option><option value="raw">展开全部上下文</option></select></label><label id="scope-label">起点 <select id="scope" aria-label="选择数据流起点"></select></label></div><span id="flow-guide"></span></div>
+      <div id="workflow-navigation" class="flow-navigation" hidden><div class="flow-navigation-controls"><label>流程 <select id="workflow-scope" aria-label="选择流程"></select></label><button id="workflow-whole">查看整条流程</button></div><span id="workflow-guide"></span></div>
+      <div id="topology-navigation" class="topology-navigation" hidden>
+        <div class="flow-navigation-controls"><label>归组 <select id="topology-grouping" aria-label="拓扑归组方式"><option value="directory">文件夹</option><option value="file">文件</option><option value="semantic">类型与作用域</option><option value="architecture">架构模块</option><option value="entity">源码实体</option></select></label><label>关系 <select id="topology-layer" aria-label="拓扑关系类型"><option value="call">调用</option><option value="data">数据流</option><option value="control">控制流</option><option value="dependency">引用与依赖</option></select></label><button id="topology-collapse">收起展开</button></div>
+        <p id="topology-summary" role="status"></p>
+      </div>
+      <div id="flows" class="flow-strip" role="group" aria-label="任务颜色，可多选" hidden></div>
+      <div id="canvas" tabindex="0" aria-label="无限画布，拖动空白平移，滚轮缩放">
+        <div id="world"><svg id="wires" aria-label="节点连线"></svg><div id="nodes"></div></div>
+        <div id="empty" class="empty" hidden></div>
+        <div class="canvas-hint">拖动空白平移 · 滚轮缩放 · 点线查看依据</div>
+        <div id="route-status" class="route-status" role="status" hidden></div>
+        <div class="zoom-tools"><button id="zoom-out" aria-label="缩小">−</button><output id="zoom-level">100%</output><button id="zoom-in" aria-label="放大">＋</button><button id="fit">适应画布</button></div>
+        <svg id="minimap" viewBox="0 0 168 92" aria-label="小地图"></svg>
+      </div>
+      <footer><span id="canvas-info">实际图谱 · 等待载入</span><span id="saved" aria-live="polite">阅读设置会保存在本地工程</span></footer>
+    </section>
+    <div id="resize-details" class="panel-resizer" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-controls="details-panel" aria-orientation="vertical" title="拖动调宽 · 双击恢复默认宽度 · 方向键微调"></div>
+    <aside id="details-panel" class="inspector" aria-label="详情面板"><div class="side-head"><span class="eyebrow">节点详情</span><span class="badge">源码可核对</span><button id="close-details" class="panel-close" aria-label="收起详情面板" title="收起详情面板">›</button></div><div id="details"><div class="placeholder">选择一个节点<br><small>查看职责、输入输出与源码依据</small></div></div></aside>
+    <button id="panel-backdrop" aria-label="关闭侧栏" tabindex="-1" hidden></button>
+  </main>
+</body>
+</html>

@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+project(MotionSample LANGUAGES CXX)
+add_executable(motion_sample tests/test_motion.cpp src/diagnostics.cpp)
+target_compile_features(motion_sample PRIVATE cxx_std_11)
+add_library(report_tool OBJECT tools/report.cpp)

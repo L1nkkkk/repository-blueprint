@@ -1,0 +1,579 @@
+{
+  "format_version": "0.1",
+  "project": {
+    "id": "project:sample",
+    "name": "MotionSample protocol fixture",
+    "snapshot_id": "snapshot:sample-v1",
+    "revision": 0,
+    "mode": "whole_repository",
+    "inventory_complete": true,
+    "execution": "active"
+  },
+  "sources": [
+    {
+      "id": "src:0",
+      "path": "src/motion.cpp",
+      "category": "source",
+      "sha256": "8d423b6bb71bfde3c88b582a5ea790170c9d7f378e98c09f82e494eb13660ba3",
+      "included": true,
+      "read_state": "read",
+      "symbols_complete": true,
+      "reason": ""
+    },
+    {
+      "id": "src:1",
+      "path": "src/diagnostics.cpp",
+      "category": "source",
+      "sha256": "ba836010c3affcfaa071124959279a3f090769605e1959ab2f5fe40387f85680",
+      "included": true,
+      "read_state": "unread",
+      "symbols_complete": false,
+      "reason": ""
+    },
+    {
+      "id": "src:2",
+      "path": "tests/test_motion.cpp",
+      "category": "source",
+      "sha256": "466281b6686fa757697f9ae20c031b0c1817357ad4e487daa3f1186dc486d5c0",
+      "included": true,
+      "read_state": "unread",
+      "symbols_complete": false,
+      "reason": ""
+    },
+    {
+      "id": "src:3",
+      "path": "CMakeLists.txt",
+      "category": "build",
+      "sha256": "41e89b167a4ee37bd132046f9dc9a0538d5bcbb643fe83e7582977064f9239bc",
+      "included": true,
+      "read_state": "read",
+      "symbols_complete": true,
+      "reason": ""
+    },
+    {
+      "id": "src:4",
+      "path": "tools/report.cpp",
+      "category": "source",
+      "sha256": "ffbedb2bfcbd99ee60a91522fb08b22f6fac3cf00e3fc385fb1c1b7c2fb3b577",
+      "included": true,
+      "read_state": "unread",
+      "symbols_complete": false,
+      "reason": ""
+    }
+  ],
+  "entities": [
+    {
+      "id": "repo:sample",
+      "kind": "repository",
+      "name": "MotionSample",
+      "language": "",
+      "roles": [],
+      "source_ids": [],
+      "analysis": "reviewed",
+      "freshness": "current",
+      "summary": "示例：MotionSample",
+      "evidence_ids": [
+        "ev:motion"
+      ]
+    },
+    {
+      "id": "dir:src",
+      "kind": "directory",
+      "name": "src",
+      "language": "",
+      "roles": [],
+      "source_ids": [],
+      "analysis": "reviewed",
+      "freshness": "current",
+      "summary": "示例：src",
+      "evidence_ids": [
+        "ev:motion"
+      ]
+    },
+    {
+      "id": "file:motion",
+      "kind": "file",
+      "name": "motion.cpp",
+      "language": "cpp",
+      "roles": [],
+      "source_ids": [
+        "src:0"
+      ],
+      "analysis": "reviewed",
+      "freshness": "current",
+      "summary": "示例：motion.cpp",
+      "evidence_ids": [
+        "ev:motion"
+      ]
+    },
+    {
+      "id": "scope:motion",
+      "kind": "namespace",
+      "name": "motion",
+      "language": "cpp",
+      "roles": [],
+      "source_ids": [
+        "src:0"
+      ],
+      "analysis": "reviewed",
+      "freshness": "current",
+      "summary": "示例：motion",
+      "evidence_ids": [
+        "ev:motion"
+      ]
+    },
+    {
+      "id": "type:movement",
+      "kind": "class",
+      "name": "MovementSystem",
+      "language": "cpp",
+      "roles": [],
+      "source_ids": [
+        "src:0"
+      ],
+      "analysis": "reviewed",
+      "freshness": "current",
+      "summary": "示例：MovementSystem",
+      "evidence_ids": [
+        "ev:motion"
+      ]
+    },
+    {
+      "id": "fn:move",
+      "kind": "method",
+      "name": "Move",
+      "language": "cpp",
+      "roles": [],
+      "source_ids": [
+        "src:0"
+      ],
+      "analysis": "reviewed",
+      "freshness": "current",
+      "summary": "示例：Move",
+      "evidence_ids": [
+        "ev:motion"
+      ],
+      "details": {
+        "inputs": [
+          "velocity",
+          "dt",
+          "state"
+        ],
+        "outputs": [],
+        "calls": [
+          "IntegratePosition"
+        ],
+        "reads": [
+          "state.position"
+        ],
+        "writes": [
+          "state.position"
+        ],
+        "conditions": []
+      }
+    },
+    {
+      "id": "fn:integrate",
+      "kind": "function",
+      "name": "IntegratePosition",
+      "language": "cpp",
+      "roles": [],
+      "source_ids": [
+        "src:0"
+      ],
+      "analysis": "reviewed",
+      "freshness": "current",
+      "summary": "示例：IntegratePosition",
+      "evidence_ids": [
+        "ev:motion"
+      ],
+      "details": {
+        "inputs": [
+          "position",
+          "velocity",
+          "dt"
+        ],
+        "outputs": [
+          "next position"
+        ],
+        "calls": [],
+        "reads": [],
+        "writes": [],
+        "conditions": []
+      }
+    },
+    {
+      "id": "field:position",
+      "kind": "field",
+      "name": "State.position",
+      "language": "cpp",
+      "roles": [],
+      "source_ids": [
+        "src:0"
+      ],
+      "analysis": "reviewed",
+      "freshness": "current",
+      "summary": "示例：State.position",
+      "evidence_ids": [
+        "ev:motion"
+      ]
+    },
+    {
+      "id": "fn:measure",
+      "kind": "function",
+      "name": "Measure",
+      "language": "cpp",
+      "roles": [],
+      "source_ids": [
+        "src:1"
+      ],
+      "analysis": "located",
+      "freshness": "current",
+      "summary": "示例：Measure",
+      "evidence_ids": []
+    },
+    {
+      "id": "fn:test",
+      "kind": "function",
+      "name": "main",
+      "language": "cpp",
+      "roles": [
+        "entry",
+        "test"
+      ],
+      "source_ids": [
+        "src:2"
+      ],
+      "analysis": "located",
+      "freshness": "current",
+      "summary": "示例：main",
+      "evidence_ids": []
+    },
+    {
+      "id": "fn:display",
+      "kind": "function",
+      "name": "DisplayUnits",
+      "language": "cpp",
+      "roles": [
+        "tool"
+      ],
+      "source_ids": [
+        "src:4"
+      ],
+      "analysis": "located",
+      "freshness": "current",
+      "summary": "示例：DisplayUnits",
+      "evidence_ids": []
+    }
+  ],
+  "memberships": [
+    {
+      "id": "member:src",
+      "parent_id": "repo:sample",
+      "child_id": "dir:src",
+      "axis": "physical"
+    },
+    {
+      "id": "member:file",
+      "parent_id": "dir:src",
+      "child_id": "file:motion",
+      "axis": "physical"
+    },
+    {
+      "id": "member:type",
+      "parent_id": "scope:motion",
+      "child_id": "type:movement",
+      "axis": "semantic"
+    },
+    {
+      "id": "member:method",
+      "parent_id": "type:movement",
+      "child_id": "fn:move",
+      "axis": "semantic"
+    },
+    {
+      "id": "member:function",
+      "parent_id": "scope:motion",
+      "child_id": "fn:integrate",
+      "axis": "semantic"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx:move",
+      "parent_id": null,
+      "caller_id": null,
+      "callee_id": null
+    },
+    {
+      "id": "ctx:integrate",
+      "parent_id": "ctx:move",
+      "caller_id": "fn:move",
+      "callee_id": "fn:integrate",
+      "callsite_evidence_id": "ev:call"
+    }
+  ],
+  "ports": [
+    {
+      "id": "p:velocity-out",
+      "entity_id": "fn:move",
+      "name": "velocity",
+      "direction": "out",
+      "channel": "data",
+      "type": "float",
+      "context_id": "ctx:move"
+    },
+    {
+      "id": "p:velocity-in",
+      "entity_id": "fn:integrate",
+      "name": "velocity",
+      "direction": "in",
+      "channel": "data",
+      "type": "float",
+      "context_id": "ctx:integrate"
+    },
+    {
+      "id": "p:next-out",
+      "entity_id": "fn:integrate",
+      "name": "result",
+      "direction": "out",
+      "channel": "data",
+      "type": "float",
+      "context_id": "ctx:integrate"
+    },
+    {
+      "id": "p:next-in",
+      "entity_id": "fn:move",
+      "name": "next",
+      "direction": "in",
+      "channel": "data",
+      "type": "float",
+      "context_id": "ctx:move"
+    },
+    {
+      "id": "p:position-out",
+      "entity_id": "field:position",
+      "name": "position before write",
+      "direction": "out",
+      "channel": "data",
+      "type": "float",
+      "context_id": "ctx:move"
+    },
+    {
+      "id": "p:position-in",
+      "entity_id": "fn:integrate",
+      "name": "position",
+      "direction": "in",
+      "channel": "data",
+      "type": "float",
+      "context_id": "ctx:integrate"
+    },
+    {
+      "id": "p:dt-out",
+      "entity_id": "fn:move",
+      "name": "dt",
+      "direction": "out",
+      "channel": "data",
+      "type": "float",
+      "context_id": "ctx:move"
+    },
+    {
+      "id": "p:dt-in",
+      "entity_id": "fn:integrate",
+      "name": "dt",
+      "direction": "in",
+      "channel": "data",
+      "type": "float",
+      "context_id": "ctx:integrate"
+    }
+  ],
+  "flows": [
+    {
+      "id": "flow:velocity",
+      "name": "velocity",
+      "producer_port_id": "p:velocity-out",
+      "color_key": "D1",
+      "value_version": "argument@move",
+      "derived_from": [],
+      "evidence_ids": [
+        "ev:call"
+      ]
+    },
+    {
+      "id": "flow:next",
+      "name": "next position",
+      "producer_port_id": "p:next-out",
+      "color_key": "D2",
+      "value_version": "integrate@return",
+      "derived_from": [
+        "flow:velocity",
+        "flow:position",
+        "flow:dt"
+      ],
+      "evidence_ids": [
+        "ev:motion"
+      ]
+    },
+    {
+      "id": "flow:position",
+      "name": "position before write",
+      "producer_port_id": "p:position-out",
+      "color_key": "D3",
+      "value_version": "state.position@before",
+      "derived_from": [],
+      "evidence_ids": [
+        "ev:call"
+      ]
+    },
+    {
+      "id": "flow:dt",
+      "name": "dt",
+      "producer_port_id": "p:dt-out",
+      "color_key": "D4",
+      "value_version": "argument-dt@move",
+      "derived_from": [],
+      "evidence_ids": [
+        "ev:call"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel:call",
+      "kind": "call",
+      "from_id": "fn:move",
+      "to_id": "fn:integrate",
+      "context_id": "ctx:integrate",
+      "basis": "source",
+      "freshness": "current",
+      "evidence_ids": [
+        "ev:call"
+      ]
+    },
+    {
+      "id": "rel:velocity",
+      "kind": "data",
+      "from_id": "p:velocity-out",
+      "to_id": "p:velocity-in",
+      "flow_id": "flow:velocity",
+      "context_id": "ctx:integrate",
+      "basis": "source",
+      "freshness": "current",
+      "evidence_ids": [
+        "ev:call"
+      ]
+    },
+    {
+      "id": "rel:position",
+      "kind": "data",
+      "from_id": "p:position-out",
+      "to_id": "p:position-in",
+      "flow_id": "flow:position",
+      "context_id": "ctx:integrate",
+      "basis": "source",
+      "freshness": "current",
+      "evidence_ids": [
+        "ev:call"
+      ]
+    },
+    {
+      "id": "rel:dt",
+      "kind": "data",
+      "from_id": "p:dt-out",
+      "to_id": "p:dt-in",
+      "flow_id": "flow:dt",
+      "context_id": "ctx:integrate",
+      "basis": "source",
+      "freshness": "current",
+      "evidence_ids": [
+        "ev:call"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev:motion",
+      "source_id": "src:0",
+      "sha256": "8d423b6bb71bfde3c88b582a5ea790170c9d7f378e98c09f82e494eb13660ba3",
+      "start_line": 1,
+      "end_line": 15,
+      "note": "人工整理的示例类型、方法和位置计算"
+    },
+    {
+      "id": "ev:call",
+      "source_id": "src:0",
+      "sha256": "8d423b6bb71bfde3c88b582a5ea790170c9d7f378e98c09f82e494eb13660ba3",
+      "start_line": 11,
+      "end_line": 12,
+      "note": "Move 调用积分函数并写回状态"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task:link",
+      "kind": "link",
+      "scope_ids": [
+        "fn:move",
+        "fn:integrate"
+      ],
+      "source_ids": [
+        "src:0"
+      ],
+      "depends_on": [],
+      "required": true,
+      "state": "queued",
+      "attempt": 0,
+      "lease": null,
+      "reason": ""
+    },
+    {
+      "id": "task:diagnostics",
+      "kind": "analyze",
+      "scope_ids": [
+        "fn:measure"
+      ],
+      "source_ids": [
+        "src:1"
+      ],
+      "depends_on": [],
+      "required": true,
+      "state": "queued",
+      "attempt": 0,
+      "lease": null,
+      "reason": ""
+    },
+    {
+      "id": "task:tests",
+      "kind": "analyze",
+      "scope_ids": [
+        "fn:test"
+      ],
+      "source_ids": [
+        "src:2"
+      ],
+      "depends_on": [],
+      "required": true,
+      "state": "queued",
+      "attempt": 0,
+      "lease": null,
+      "reason": ""
+    },
+    {
+      "id": "task:tools",
+      "kind": "analyze",
+      "scope_ids": [
+        "fn:display"
+      ],
+      "source_ids": [
+        "src:4"
+      ],
+      "depends_on": [],
+      "required": true,
+      "state": "queued",
+      "attempt": 0,
+      "lease": null,
+      "reason": ""
+    }
+  ],
+  "receipts": {}
+}

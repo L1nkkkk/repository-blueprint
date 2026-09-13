@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+work/
+.codemap/
+
+# Local credentials, host settings and editor state
+.env
+.env.*
+!.env.example
+.codex/
+.claude/
+.gemini/
+.vscode/
+.idea/
+
+# Analysis databases, logs and generated distributions
+*.sqlite
+*.sqlite-*
+*.log
+dist/
+build/
+node_modules/
+.DS_Store
+Thumbs.db
