@@ -55,7 +55,7 @@ def create_server(store, *, port=0):
                     '/': ('index.html', 'text/html; charset=utf-8'),
                     **{f'/{name}': (name, 'text/javascript; charset=utf-8') for name in
                        ('app.js', 'canvas-model.js', 'topology-model.js', 'workflow-model.js',
-                        'panel-layout.js', 'source-highlight.js', 'workbench.js', 'vendor/highlight.min.js')},
+                        'panel-layout.js', 'camera.js', 'source-highlight.js', 'workbench.js', 'vendor/highlight.min.js')},
                     **{f'/{name}': (name, 'text/css; charset=utf-8') for name in ('style.css', 'reader.css', 'workbench.css')},
                 }
                 if request.path in assets:

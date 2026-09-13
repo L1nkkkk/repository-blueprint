@@ -11,6 +11,8 @@ let view = {}, selected = null, selectedLink = null, sceneNodes = [], sceneEdges
 let nodeElements = new Map(), portElements = new Map();
 let routedEdges = new Map(), wireFrame;
 let fileScopeCache=null;
+let renderGeneration=0;
+const camera=CanvasCamera.create({read:()=>layout().viewport,write:viewport=>{layout().viewport=viewport;applyViewport();},finish:saveSoon,reducedMotion:()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches});
 const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
 const elem = (tag, attrs={}, ...children) => {
   const e = document.createElement(tag);
@@ -37,7 +39,7 @@ function flowView(){return view.mode!=='structure';}
 function focusedFlows(){return view.mode==='workflow'?Workflow.trace(graph,view.focus):new Set(view.focus);}
 function sceneFocus(){return Workflow.focus({nodes:sceneNodes,edges:sceneEdges},view.taskFocus,[...focusedFlows()]);}
 function applyFlowFocus(){const focus=sceneFocus();for(const [k,card] of nodeElements)card.classList.toggle('dim',flowView()&&focus.active&&!focus.nodes.has(k));renderFlows();renderWorkflowNavigation();drawWires();saveSoon();}
-function focusTask(id,toggle=false){view.taskFocus=toggle?(view.taskFocus.includes(id)?view.taskFocus.filter(k=>k!==id):[...view.taskFocus,id]):[id];view.focus=[];applyFlowFocus();renderTaskDetails(workflowTasks.byId.get(id));}
+function focusTask(id,toggle=false){camera.cancel();view.taskFocus=toggle?(view.taskFocus.includes(id)?view.taskFocus.filter(k=>k!==id):[...view.taskFocus,id]):[id];view.focus=[];applyFlowFocus();renderTaskDetails(workflowTasks.byId.get(id));if(view.taskFocus.length){const focus=sceneFocus();frameNodes(sceneNodes.filter(n=>focus.nodes.has(n.key)));}}
 function traceData(flow,taskIds){view.taskFocus=taskIds;view.focus=[flow.id];applyFlowFocus();}
 function expandGroup(id){view.expandedGroups=[...new Set([...view.expandedGroups,id])];selected=null;selectedLink=null;render();saveSoon();}
 function layout(){view.layouts??={};return view.layouts[key()]??=( {positions:{},viewport:{x:40,y:42,z:1}} );}
@@ -86,12 +88,17 @@ function syncFileSelection(){
 }
 function frameFile(sourceId){
   if(view.fileSelection!==sourceId)return;
-  const nodes=fileNodes(sourceId).filter(n=>nodeElements.has(n.key));if(!nodes.length)return;
-  const p=layout().positions,c=$('#canvas'),v=layout().viewport;
-  const minX=Math.min(...nodes.map(n=>p[n.key].x)),minY=Math.min(...nodes.map(n=>p[n.key].y));
-  const maxX=Math.max(...nodes.map(n=>p[n.key].x+nodeElements.get(n.key).offsetWidth)),maxY=Math.max(...nodes.map(n=>p[n.key].y+nodeElements.get(n.key).offsetHeight));
-  const z=Math.min(clamp(v.z,.85,1.15),clamp(Math.min((c.clientWidth-80)/(maxX-minX),(c.clientHeight-150)/(maxY-minY)),.22,1.15));
-  layout().viewport={z,x:c.clientWidth/2-(minX+maxX)/2*z,y:(c.clientHeight-80)/2-(minY+maxY)/2*z};applyViewport();saveSoon();
+  frameNodes(fileNodes(sourceId));
+}
+function frameNodes(nodes,options){
+  // On narrow windows, leave the selected node visible instead of covering it
+  // with a drawer. Its details remain available from the Details toggle.
+  panelControls.closeDrawers();
+  const keys=new Set(nodes.map(n=>n.key));
+  camera.focus(()=>{
+    const boxes=[...keys].flatMap(k=>{const p=layout().positions[k],card=nodeElements.get(k);return p&&card?[{x:p.x,y:p.y,width:card.offsetWidth,height:card.offsetHeight}]:[];});
+    const canvas=$('#canvas');return CanvasCamera.frame(layout().viewport,boxes,{width:canvas.clientWidth,height:canvas.clientHeight});
+  },options);
 }
 function openFile(source){
   const file=graph.entities.find(e=>e.kind==='file'&&e.source_ids.includes(source.id));
@@ -101,7 +108,7 @@ function openFile(source){
   }
   view.fileSelection=source.id;selected={key:file.id,entity:file,context:null,sourceSelection:true};selectedLink=null;
   panelControls.closeDrawers();panelControls.open('details');render();renderDetails(selected);
-  requestAnimationFrame(()=>frameFile(source.id));saveSoon();
+  frameFile(source.id);saveSoon();
 }
 function updateStatus(data){
   const c=data.coverage,counts=data.task_counts;
@@ -248,6 +255,7 @@ function syncCanvasControls(){
 }
 function render(){
   if(!graph)return;
+  camera.cancel();const generation=++renderGeneration;
   if(!selected&&!selectedLink&&view.fileSelection){const file=graph.entities.find(e=>e.kind==='file'&&e.source_ids.includes(view.fileSelection));if(file){selected={key:file.id,entity:file,context:null,sourceSelection:true};renderDetails(selected);}}
   if(!selected&&!selectedLink){sourceGeneration++;$('#details').replaceChildren(elem('div',{class:'placeholder'},'选择一个节点或连线',elem('br'),elem('small',{text:'查看职责、数据去向与源码依据'})));}
   document.querySelectorAll('.view-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.mode===view.mode));
@@ -289,7 +297,7 @@ function render(){
     const kids=workflowRole?[]:childrenOf(e.id);
     if(n.canExpand)card.append(elem('button',{class:'node-enter',text:'展开组内拓扑 ↗',onclick:event=>{event.stopPropagation();expandGroup(e.id);}}));
     else if(kids.length)card.append(elem('button',{class:'node-enter',text:`展开 ${kids.length} 个节点 ↗`,onclick:event=>{event.stopPropagation();goTo(e.id);}}));
-    card.addEventListener('click',()=>{if(card.dataset.moved==='true'){card.dataset.moved='false';return;}selectNode(n);});
+    card.addEventListener('click',event=>{if(card.dataset.moved==='true'){card.dataset.moved='false';return;}if(event.detail>1)return;selectNode(n,{delay:event.detail?240:0});});
     card.addEventListener('dblclick',()=>n.canExpand?expandGroup(e.id):n.expandContext?enterContext(n.expandContext):kids.length?goTo(e.id):selectNode(n));
     card.addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target===card)selectNode(n);});
     card.querySelector('.node-head').addEventListener('pointerdown',event=>startNodeDrag(event,n,card));
@@ -298,9 +306,9 @@ function render(){
   $('#empty').hidden=!!sceneNodes.length;
   $('#empty').textContent=$('#search').value?'没有匹配的代码节点。':view.mode==='workflow'?'尚未整理流程。阅读者记录入口与调用上下文后，会显示在这里；仓库文件仍可从左侧查看。':view.mode==='relations'?'还没有保存这类关系。阅读者提交带源码依据的调用或数据流后，会显示在这里。':'这一层尚未整理子节点。可从左侧打开文件核对源码，再让阅读者继续拆解。';
   if(view.mode!=='structure')arrangeNodes();
-  syncFileSelection();applyViewport();requestAnimationFrame(()=>{drawWires();if(firstLayout&&sceneNodes.length)fit();});
+  syncFileSelection();applyViewport();requestAnimationFrame(()=>{if(generation!==renderGeneration)return;drawWires();if(firstLayout&&sceneNodes.length&&!camera.active)fit();});
 }
-function selectNode(n){selected=n;selectedLink=null;view.fileSelection=null;if(n.role==='workflow-entry'||n.role==='workflow-input'){view.taskFocus=n.taskIds;view.focus=n.flowId?[n.flowId]:[];applyFlowFocus();}syncFileSelection();renderDetails(n);panelControls.open('details');}
+function selectNode(n,options){selected=n;selectedLink=null;view.fileSelection=null;if(n.role==='workflow-entry'||n.role==='workflow-input'){view.taskFocus=n.taskIds;view.focus=n.flowId?[n.flowId]:[];applyFlowFocus();}syncFileSelection();renderDetails(n);panelControls.open('details');frameNodes([n],options);}
 function renderTaskDetails(task){
   if(!task)return;
   selected={key:'task:'+task.id,taskId:task.id};selectedLink=null;view.fileSelection=null;syncFileSelection();sourceGeneration++;
@@ -520,10 +528,11 @@ $('#canvas').addEventListener('pointerdown',event=>{
   canvas.setPointerCapture(event.pointerId);canvas.classList.add('dragging');
   const move=e=>{v.x=px+e.clientX-x;v.y=py+e.clientY-y;applyViewport();};const end=()=>{canvas.classList.remove('dragging');canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',end);canvas.removeEventListener('pointercancel',end);saveSoon();};canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
 });
-function zoom(factor,x,y){if(!graph)return;const v=layout().viewport,z=clamp(v.z*factor,.22,2);v.x=x-(x-v.x)*z/v.z;v.y=y-(y-v.y)*z/v.z;v.z=z;applyViewport();saveSoon();}
+function zoom(factor,x,y){if(!graph)return;camera.cancel();const v=layout().viewport,z=clamp(v.z*factor,.22,2);v.x=x-(x-v.x)*z/v.z;v.y=y-(y-v.y)*z/v.z;v.z=z;applyViewport();saveSoon();}
 $('#canvas').addEventListener('wheel',event=>{event.preventDefault();const rect=$('#canvas').getBoundingClientRect();zoom(Math.exp(-event.deltaY*.001),event.clientX-rect.x,event.clientY-rect.y);},{passive:false});
 $('#zoom-in').onclick=()=>zoom(1.2,$('#canvas').clientWidth/2,$('#canvas').clientHeight/2);$('#zoom-out').onclick=()=>zoom(1/1.2,$('#canvas').clientWidth/2,$('#canvas').clientHeight/2);
 function fit(focused=false){
+  camera.cancel();
   if(!sceneNodes.length)return;
   const focus=sceneFocus(),onlyFocus=focused&&focus.active&&focus.nodes.size;
   const nodes=onlyFocus?sceneNodes.filter(n=>focus.nodes.has(n.key)):sceneNodes;
@@ -556,6 +565,10 @@ $('#topology-collapse').onclick=()=>{view.expandedGroups=[];selected=null;select
 document.querySelectorAll('.theme button').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.theme);saveSoon();});
 document.querySelectorAll('.view-tabs button').forEach(b=>b.onclick=()=>{remember();view.mode=b.dataset.mode;if((view.mode==='workflow'||scoped())&&view.taskFocus.length===1&&workflowTasks.byContext.get(view.scope)!==view.taskFocus[0])view.scope=view.taskFocus[0];selected=null;selectedLink=null;panelControls.closeDrawers();render();saveSoon();});
 const panelControls=PanelLayout.mount({getState:()=>view,changed:saveSoon});
+// Manual interaction takes over immediately, including node and sidebar resizing.
+document.addEventListener('pointerdown',()=>camera.cancel(),true);
+document.addEventListener('keydown',event=>{if(event.key==='Escape'||event.target.closest('.panel-resizer'))camera.cancel();},true);
+window.addEventListener('resize',()=>camera.cancel());
 new ResizeObserver(()=>{if(graph){drawMinimap();requestWires();}}).observe($('#canvas'));
 async function load(initial=false){
   if(loading)return;loading=true;$('#refresh').disabled=true;

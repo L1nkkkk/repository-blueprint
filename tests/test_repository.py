@@ -269,7 +269,7 @@ class CanvasServerTests(unittest.TestCase):
         self.assertNotIn('highlight_prefix',read_source(graph,root,'a.py',start=2,limit=2))
         # The HTTP reader must reject the now-stale saved snapshot even for highlighting.
         self.assertEqual(self.request('/api/source?id=a.py&start=2&context=1')[0],400)
-        for path in ('/panel-layout.js','/source-highlight.js','/vendor/highlight.min.js','/reader.css'):
+        for path in ('/panel-layout.js','/camera.js','/source-highlight.js','/vendor/highlight.min.js','/reader.css'):
             code,body=self.request(path);self.assertEqual(code,200,path);self.assertTrue(body)
         self.assertEqual(self.request('/vendor/../server.py')[0],404)
 
