@@ -91,7 +91,10 @@ TOOLS = [
          {'project': PROJECT, 'output': string('Absolute new export filename.')}, ['project', 'output']),
     tool('canvas', 'Start or reuse a loopback canvas for a map and return its URL for the host to open. No AI is started. The server lives until this MCP connection closes; saved analysis and layout survive. close stops only this connection\'s canvas.',
          {'project': PROJECT, 'action': {'type': 'string', 'enum': ['open', 'close'], 'default': 'open'},
-          'port': integer(0, 0, 65535)}, ['project'], idempotent=True),
+         'port': integer(0, 0, 65535)}, ['project'], idempotent=True),
+    tool('metrics', 'Read locally observed MCP timing, between-call intervals, repeated source lines, failures and successful batch receipts. Select a recorded connection/session; default latest. Intervals are not pure model reasoning time, bytes are not tokens, and old uninstrumented runs cannot be backfilled. This report does not itself add timing events or change progress.',
+         {'project': PROJECT, 'session': string('Recorded session ID from this report.'),
+          'limit': integer(40, 1, 100)}, ['project'], read_only=True),
     tool('guide', 'Read workflow for the portable reading Skill, then the needed graph schema, task protocol, tool guide, or node catalog. No host-specific Skill installation is required. Text guides are paginated.',
          {'topic': {'type': 'string', 'enum': ['workflow', 'graph-format', 'task-protocol', 'commands', 'preparation', 'structure', 'reading-pack', 'catalog']},
           'start': integer(1, 1, 100000000), 'limit': integer(160, 1, 500)}, ['topic'], read_only=True),
@@ -131,10 +134,16 @@ def absolute(value):
 
 class AgentTools:
     def __init__(self):
+        from .metrics import Recorder
         self.canvases = {}
         self.reads = ReadLedger()
+        self.metrics = Recorder()
+
+    def set_client_info(self, info):
+        self.metrics.set_client(info)
 
     def close(self):
+        self.metrics.close()
         for server, thread in self.canvases.values():
             server.shutdown()
             server.server_close()
@@ -142,10 +151,33 @@ class AgentTools:
         self.canvases.clear()
 
     def call(self, name, args):
+        started, clock = self.metrics.wall(), self.metrics.clock()
         spec = next((t for t in TOOLS if t['name'] == name), None)
         require(spec is not None, 'Unknown blueprint tool.')
         validate_input(args, spec['inputSchema'])
         name = name.removeprefix('blueprint_')
+        if name == 'guide':
+            return self._execute(name, args)
+        if name == 'init':
+            result = self._execute(name, args)
+            store = open_project(result['project_directory'])
+            span = self.metrics.begin(store, name, args, started=started, start_clock=clock)
+            span.finish(result)
+            return result
+        store = open_project(absolute(args['project']))
+        if name == 'metrics':
+            from .metrics import report
+            return report(store, session=args.get('session'), limit=args.get('limit', 40))
+        span = self.metrics.begin(store, name, args, started=started, start_clock=clock)
+        try:
+            result = self._execute(name, args, store=store, span=span)
+        except Exception as error:
+            span.finish(error=error)
+            raise
+        span.finish(result)
+        return result
+
+    def _execute(self, name, args, *, store=None, span=None):
         if name == 'guide':
             if args['topic'] == 'catalog':
                 return {'catalog': CATALOG}
@@ -185,7 +217,6 @@ class AgentTools:
                 reopened = False
             return {'project_directory': str(output), 'reopened': reopened, **status_view(status(store, check_snapshot=True), args.get('detail', 'summary'))}
         directory = absolute(args['project'])
-        store = open_project(directory)
         if name == 'index':
             from .structure import build_index, query_index, index_status
             from .syntax import capabilities
@@ -235,6 +266,8 @@ class AgentTools:
         if name == 'commit':
             require(('batch' in args) != ('prepared_id' in args), 'commit requires exactly one of batch or prepared_id')
             batch = store.read_prepared(args['prepared_id']) if 'prepared_id' in args else args['batch']
+            if span is not None:
+                span.batch(batch)
             committed = commit_result(store, batch)
             return {**status_view(status(store), args.get('detail', 'summary')),
                     'receipt': {'batch_id': batch['batch_id'], **committed['receipts'][batch['batch_id']]}}

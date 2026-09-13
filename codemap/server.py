@@ -71,6 +71,9 @@ def create_server(store, *, port=0):
                 elif request.path == '/api/coverage':
                     current = canvas_graph(store)
                     self.respond({**coverage_report(current['graph']), 'snapshot': current['snapshot']})
+                elif request.path == '/api/metrics':
+                    from .metrics import report
+                    self.respond(report(store, session=query.get('session', [None])[0], limit=int(query.get('limit', ['40'])[0])))
                 elif request.path == '/api/agent-connection':
                     self.respond(connection_info(query.get('client', ['generic'])[0]))
                 elif request.path == '/api/requests':

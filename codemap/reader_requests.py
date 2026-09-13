@@ -394,7 +394,7 @@ def reader_mcp(directory, id, run_token):
     from .agent import AgentTools, TOOLS
     from .mcp import StdioServer, main
     store = open_project(directory); request = request_by_id(store, id)
-    allowed = {'guide', 'status', 'read', 'search', 'query', 'context', 'index', 'pack'}
+    allowed = {'guide', 'status', 'read', 'search', 'query', 'context', 'index', 'pack', 'metrics'}
     if request['kind'] != 'question': allowed.update({'next', 'prepare', 'commit', 'task'})
     class ScopedTools(AgentTools):
         def __init__(self):

@@ -92,6 +92,8 @@ python scripts/build_portable.py --output work/portable/repository-blueprint --z
 
 ## 其他 Agent
 
+新版 MCP 自动记录通用审阅耗时，画布入口为“Agent → 审阅耗时”，也可调用 `blueprint_metrics` 查询。正在运行的 WorkBuddy 或其他 Agent 应先提交完当前批次，再切换新版包并重连；旧进程不能热补统计。换连接继续使用原地图目录，无需重新初始化。统计口径、导出与对比条件见 [工作台指南](WORKBENCH.md#审阅耗时与基线)。
+
 模块阅读包通过通用 `blueprint_pack` 提供；`blueprint_next` 默认附带第一页。Agent 按返回的 `next_cursor` 继续，不必重复查询包里完整的记录或重读已提供的源码行。新接口无需额外安装依赖；更新包后重连 MCP，Codex 则在新任务中加载更新后的工具。
 
 工具基于本地 stdio MCP，command 为本机 Python，args 为 `-u`、包内 `scripts/run.py` 的绝对路径、`mcp`。宿主可通过 `blueprint_guide(topic="workflow")` 读取规范。换 Agent 后复用原地图路径，查询已有证据和待办；每个阅读者使用自己的 worker 身份，遵守已有租约。图谱与已提交成果跨宿主共享，未提交的思考过程和聊天记录不共享。这不是远程 HTTP MCP。

@@ -79,7 +79,7 @@ class AgentIntegrationTests(unittest.TestCase):
 
     def test_relocated_package_exposes_tools_and_all_guides_without_checkout(self):
         tools = self.client.rpc('tools/list', {})['tools']
-        self.assertEqual(len(tools), 16)
+        self.assertEqual(len(tools), 17)
         index = self.client.call('index', project=self.map, source='值.py')
         self.assertEqual(index['records'][0]['name'], 'x')
         self.assertEqual(index['state'], 'parsed')
@@ -102,6 +102,23 @@ class AgentIntegrationTests(unittest.TestCase):
         self.assertTrue((rebuilt / 'runtime/codemap/web/topology-model.js').is_file())
         self.assertEqual((rebuilt / 'skills/repository-blueprint/references/graph-format.md').read_bytes(),
                          (self.plugin / 'skills/repository-blueprint/references/graph-format.md').read_bytes())
+
+    def test_metrics_are_available_through_packaged_stdio_http_and_cli(self):
+        from urllib.parse import urlsplit
+        self.client.call('read', project=self.map, source='值.py')
+        address = urlsplit(self.client.call('canvas', project=self.map)['url'])
+        data = self.client.call('metrics', project=self.map)
+        self.assertEqual(data['selected']['client'], 'integration-test')
+        self.assertTrue(data['snapshot_matches_start'])
+        connection = HTTPConnection(address.hostname, address.port, timeout=3)
+        connection.request('GET', '/api/metrics?session=' + data['selected']['id'])
+        response = connection.getresponse(); self.assertEqual(response.status, 200)
+        via_http = json.loads(response.read()); connection.close()
+        self.assertEqual(via_http['summary']['calls'], data['summary']['calls'])
+        self.assertEqual(via_http['summary']['tool_ms'], data['summary']['tool_ms'])
+        cli = subprocess.run([sys.executable, str(self.entry), 'metrics', self.map, '--session', data['selected']['id']],
+                             capture_output=True, encoding='utf-8', check=True, timeout=10)
+        self.assertEqual(json.loads(cli.stdout)['summary']['calls'], data['summary']['calls'])
 
     def test_read_commit_idempotency_invalid_evidence_and_cross_session_reopen(self):
         claimed = self.client.call('next', project=self.map, worker='test-reader', detail='full')

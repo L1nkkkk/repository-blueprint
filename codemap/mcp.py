@@ -55,6 +55,8 @@ class StdioServer:
             if not isinstance(params.get('protocolVersion'), str) or not isinstance(params.get('capabilities'), dict) or not isinstance(params.get('clientInfo'), dict):
                 return error(request_id, -32602, 'Expected protocolVersion, capabilities and clientInfo')
             self.version = params['protocolVersion'] if params['protocolVersion'] in VERSIONS else VERSIONS[0]
+            if hasattr(self.tools, 'set_client_info'):
+                self.tools.set_client_info(params['clientInfo'])
             result = {'protocolVersion': self.version, 'capabilities': {'tools': {}},
                       'serverInfo': {'name': 'repository-blueprint', 'version': '0.5.0'}, 'instructions': self.instructions}
         elif method == 'ping':

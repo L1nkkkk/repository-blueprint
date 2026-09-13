@@ -19,7 +19,7 @@ cd repository-blueprint
 
 通用接入只需要 Python 3.10+ 和支持本地 stdio MCP 的 Agent。在项目根目录运行 `python scripts/run.py connect --client claude-code` 或 `--client gemini-cli`，获取使用本机绝对路径的配置。画布“Agent → 外部 MCP Agent”也可以复制配置及当前节点或整个工程的接续说明。接续不会自动启动 Agent。
 
-运行 `python scripts/build_portable.py --output work/portable/repository-blueprint` 可打包独立的 Skill、16 个 MCP 工具和画布，不需要 Codex 安装器；换位置后重新运行包内的 `scripts/run.py connect` 生成当地配置。Codex 用户仍可用 `./install.ps1` 安装个人插件。具体配置位置、调用和继续已有工程见 [安装与调用指南](INSTALL.md)。
+运行 `python scripts/build_portable.py --output work/portable/repository-blueprint` 可打包独立的 Skill、17 个 MCP 工具和画布，不需要 Codex 安装器；换位置后重新运行包内的 `scripts/run.py connect` 生成当地配置。Codex 用户仍可用 `./install.ps1` 安装个人插件。具体配置位置、调用和继续已有工程见 [安装与调用指南](INSTALL.md)。
 
 审阅默认采用简明状态和任务返回；`blueprint_context` 核对已有结论的来源是否变化，`blueprint_prepare` 按实际读过的行号补齐 ID、指纹和引用，再按准备批次 ID 提交。全仓库队列、函数细节和源码校验保持不变。用法见 [高效阅读指南](skills/repository-blueprint/references/preparation.md)。这些改动减少传输与重复整理，实际模型耗时还需同条件测量。
 
@@ -122,6 +122,8 @@ python examples/build_example.py
 程序会读取随项目提供的示例文件并生成固定结构的图谱。这是样例生成器，不提供任意仓库的代码理解能力。
 
 ## 已实现的基础能力
+
+“Agent → 审阅耗时”查看新版 MCP 连接的本地工具耗时、调用间隔、重复源码行、失败重试与成功批次，可按连接选择并导出报告。WorkBuddy 等外部 MCP 宿主共用这条统计路径；调用间隔不是纯模型推理时间。旧连接不会自动补记，等当前批次提交后再重连新版工具。统计定义与比较方法见 [工作台指南](WORKBENCH.md#审阅耗时与基线)。
 
 - 节点种类目录与 JSON 图谱校验，包括端口方向、调用上下文、源码指纹与证据位置。
 - 领取任务、处理过期执行身份、分批合并、重复提交识别和完成状态计算。

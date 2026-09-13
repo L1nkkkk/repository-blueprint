@@ -32,11 +32,14 @@ def main(argv=None):
     validate = commands.add_parser('validate', help='校验 JSON 交换文件')
     validate.add_argument('graph', type=Path)
     validate.add_argument('--source-root', type=Path)
-    for name in ('status', 'index', 'pack', 'update', 'read', 'search', 'next', 'commit', 'renew', 'retry', 'recover', 'pause', 'resume', 'export', 'serve'):
+    for name in ('status', 'metrics', 'index', 'pack', 'update', 'read', 'search', 'next', 'commit', 'renew', 'retry', 'recover', 'pause', 'resume', 'export', 'serve'):
         sub = commands.add_parser(name)
         sub.add_argument('project', type=Path, help='包含 map.sqlite 的工程目录')
         if name == 'status':
             sub.add_argument('--check-snapshot', action='store_true')
+        elif name == 'metrics':
+            sub.add_argument('--session')
+            sub.add_argument('--limit', type=int, default=40)
         elif name == 'index':
             sub.add_argument('--source')
             sub.add_argument('--query', action='store_true')
@@ -108,6 +111,9 @@ def main(argv=None):
             graph = store.read()
             if args.command == 'status':
                 result = status(store, check_snapshot=args.check_snapshot)
+            elif args.command == 'metrics':
+                from .metrics import report
+                result = report(store, session=args.session, limit=args.limit)
             elif args.command == 'index':
                 from .structure import build_index, query_index, index_status
                 if args.query:
