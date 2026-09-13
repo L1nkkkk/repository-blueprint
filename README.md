@@ -150,3 +150,9 @@ python examples/build_example.py
 - 文件读取支持 UTF-8 与带 BOM 的 UTF-16，上限 2 MiB。超过上限或编码不支持的源码仍是必需待办。链接和 Windows 重解析点不会被跟随，并记录为清单缺口。
 - 默认跳过 `.git`、`.hg`、`.svn`、`.codemap` 元数据；`--exclude` 可重复指定显式排除。不会隐式按 `.gitignore` 缩小范围。
 - 当前画布加载整图后按层显示，每层最多 150 个节点，文件列表展示前 200 项，可通过搜索收窄。UE、大图分片及五种语言的深度语义能力尚未验证；识别扩展名不等于语义支持。
+
+## 许可证
+
+除另有说明的第三方组件外，本项目采用 [MIT License](LICENSE)，版权署名为 `2026 L1nkkkk`。
+
+随项目分发的 Highlight.js 保留其 [BSD-3-Clause 许可声明](codemap/web/vendor/highlight.LICENSE)。通用 MCP 包和 Codex 插件包均包含本项目的 MIT 许可证及该第三方声明。

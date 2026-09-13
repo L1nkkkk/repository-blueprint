@@ -41,7 +41,7 @@ def payload_files(source=ROOT, *, kind='codex'):
         scripts.append('install_plugin.py')
     for name in scripts:
         files['scripts/' + name] = (source / 'scripts' / name).read_bytes()
-    for name in ['INSTALL.md', 'WORKBENCH.md', 'requirements-parsers.txt', *(['install.ps1'] if kind == 'codex' else [])]:
+    for name in ['LICENSE', 'INSTALL.md', 'WORKBENCH.md', 'requirements-parsers.txt', *(['install.ps1'] if kind == 'codex' else [])]:
         files[name] = (source / name).read_bytes()
     return files
 
