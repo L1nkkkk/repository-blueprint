@@ -1,0 +1,11 @@
+{
+  "batches": [
+    {
+      "batch": 1,
+      "claim_seconds": 0.16002690000459552,
+      "state": "budget_exhausted_or_idle"
+    }
+  ],
+  "claim_median_ms": 160.02690000459552,
+  "submit_median_ms": null
+}

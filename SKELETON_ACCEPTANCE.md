@@ -1,6 +1,6 @@
 # 骨架改造验收记录
 
-本页保留 aa113ad 版本的万行级实测数据。后续规模路径阶段 A 的实现与回归见 [SCALE_PROGRESS.md](SCALE_PROGRESS.md)；尚未进行独立 mypy 十万行基准，不能将本页旧数据视为新版本的十万行验收。
+本页保留 aa113ad 版本的万行级实测数据。后续规模路径阶段 A 的实现与回归见 [SCALE_PROGRESS.md](SCALE_PROGRESS.md)。阶段 B 已对真实 `python/mypy` 浅克隆执行独立基准，详见 [BENCH_100K.md](BENCH_100K.md)；该报告包含体积 FAIL、submit 预算不足和并发混压未执行，不应解读为全门禁通过。
 
 
 验收日期：2026-09-14。环境：Windows，Python 3.12.14，Node.js 24.14.1，项目 requirements-parsers.txt 中锁定的 Tree-sitter 后端。基于 SKELETON_PLAN.md 的 M1–M4，验证工作区实际实现；性能数字为本机实测，不外推为所有仓库的保证。
@@ -51,6 +51,8 @@ python scripts/benchmark_skeleton.py . --exclude work --exclude "**/__pycache__"
 基准脚本使用临时工程，不修改被测源码；可用 --output 保存 JSON 结果。脚本在一致性、doctor 或 P95 门槛失败时返回非零。使用说明与完整语义 batch 示例见 SKELETON.md；插件内结构参考文档已同步更新。
 
 ## 与初稿相比的实现选择和未验证范围
+
+阶段 B 新增验证范围：真实 mypy HEAD `2ee4f4f4631099201b192528ae48ef65e2c3c60c`，1,481 个蓝图索引源码文件、Python/Python stub 265,447 行；全仓 init、单/20 文件 sync、查询和 repo_map 已取得三次原始数据。数据库大小门禁 FAIL；语义 static_revalidation、10 个 submit batch 和并发混压没有形成完整 PASS 证据。可重复脚本与原始 JSON 见 [BENCH_100K.md](BENCH_100K.md)。
 
 1. 全树文件哈希对账覆盖 Git 未提交、未跟踪和被忽略但纳入清单的源码，没有仅按 git diff 跳过磁盘核对。只重解析变化文件，但变更同步会重新核对项目调用解析与 FTS；不是完全 O(变更符号数) 的索引更新。
 2. 保留旧整图任务协议与审阅完成规则。新增关系型 semantic_tasks/semantic_receipts 复用 claim/lease/batch 机制，单独服务节点语义，避免破坏现有 entity/scope 校验。CodexExecutor 与其他宿主使用同一接口，未启动模型进行成本实验。
