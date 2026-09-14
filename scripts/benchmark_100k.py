@@ -16,10 +16,12 @@ from pathlib import Path
 from statistics import median
 import sys
 from time import perf_counter
+from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from codemap.project import initialize_project, open_project
 from codemap import skeleton
+from codemap.executor import claim, submit
 
 
 def tracked_files(root: Path) -> list[Path]:
@@ -50,9 +52,9 @@ def timed(fn):
     return round(perf_counter() - started, 6), value
 
 
-def run_init(root: Path, output: Path, repeat: int) -> dict:
+def run_init(root: Path, output: Path, repeat: int, budget: int) -> dict:
     map_dir = output / f"init-{repeat}"
-    elapsed, store = timed(lambda: initialize_project(root, map_dir))
+    elapsed, store = timed(lambda: initialize_project(root, map_dir, budget=budget))
     with skeleton.connection(store) as db:
         counts = {table: db.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
                   for table in ("files", "nodes", "edges")}
@@ -63,7 +65,7 @@ def run_init(root: Path, output: Path, repeat: int) -> dict:
 def query_benchmark(store, root: Path) -> dict:
     with skeleton.connection(store) as db:
         names = [dict(r) for r in db.execute(
-            "SELECT id,name FROM nodes WHERE kind IN ('function','method') ORDER BY id LIMIT 20")]
+            "SELECT id,name FROM nodes WHERE kind IN ('function','method') ORDER BY degree DESC,id LIMIT 10")]
     samples = {key: [] for key in ("find_symbol_exact", "find_symbol_fuzzy", "callers", "callees", "search")}
     for row in names:
         actions = (
@@ -76,6 +78,9 @@ def query_benchmark(store, root: Path) -> dict:
         for key, action in actions:
             elapsed, _ = timed(action)
             samples[key].append(round(elapsed * 1000, 3))
+            if key in {"find_symbol_exact", "find_symbol_fuzzy", "callers", "callees"}:
+                elapsed, _ = timed(action)
+                samples[key].append(round(elapsed * 1000, 3))
     paths = ["", "mypy", "mypyc", "test-data/unit"]
     repo_map = []
     for path in paths:
@@ -85,42 +90,75 @@ def query_benchmark(store, root: Path) -> dict:
             "repo_map": repo_map, "source": str(root)}
 
 
-def mutation_benchmark(store, root: Path, output: Path) -> dict:
+def semantic_benchmark(store) -> dict:
+    rows = []
+    for number in range(10):
+        started = perf_counter()
+        claimed = claim(store, "stage-b-fix-benchmark", n=1)
+        claim_seconds = perf_counter() - started
+        if not claimed["tasks"]:
+            raise RuntimeError(f"semantic claim {number + 1} did not return a task: {claimed['state']}")
+        task = claimed["tasks"][0]
+        result = {"node_id": task["node_id"], "body_sha": task["body_sha"], "lease_id": task["lease_id"],
+                  "summary": "Stage B benchmark semantic record", "detail": {"benchmark": True},
+                  "evidence": [{"node_id": task["node_id"], "body_sha": task["body_sha"],
+                                "start_line": task["start_line"], "end_line": task["end_line"]}],
+                  "model": "stage-b-fix-benchmark", "used_tokens": 0}
+        started = perf_counter()
+        receipt = submit(store, {"batch_id": f"stage-b-{uuid4()}", "results": [result]})
+        rows.append({"batch": number + 1, "claim_seconds": claim_seconds,
+                     "submit_seconds": perf_counter() - started, "accepted": receipt["accepted"],
+                     "path": task["path"], "node_id": task["node_id"]})
+    return {"rows": rows, "first_submit_seconds": rows[0]["submit_seconds"],
+            "last_submit_seconds": rows[-1]["submit_seconds"],
+            "semantic_paths": [row["path"] for row in rows]}
+
+
+def mutation_benchmark(store, root: Path, semantic_paths, budget: int) -> dict:
     candidates = [p for p in tracked_files(root) if p.suffix == ".py" and p.stat().st_size < 200_000]
-    one = next(p for p in candidates if any(
+    body_one = next(p for p in candidates if any(
         line.startswith((" ", "\t")) and line.lstrip().startswith("return ")
         for line in p.read_text(encoding="utf-8", errors="ignore").splitlines()))
+    cosmetic_one = next(root / p for p in semantic_paths if (root / p).exists())
     twenty = candidates[:20]
     records = {"one_function": [], "twenty_files": [], "cosmetic": []}
-    originals = {p: p.read_bytes() for p in set([one, *twenty])}
+    originals = {p: p.read_bytes() for p in set([body_one, cosmetic_one, *twenty])}
     try:
         for repeat in range(3):
-            text = one.read_text(encoding="utf-8")
+            text = body_one.read_text(encoding="utf-8")
             lines = text.splitlines(keepends=True)
             idx = next(i for i, line in enumerate(lines) if line.lstrip().startswith("return ") and line.startswith((" ", "\t")))
-            lines[idx] = lines[idx].rstrip("\r\n") + "  # benchmark body mutation\n"
-            one.write_text("".join(lines), encoding="utf-8", newline="")
-            elapsed, result = timed(lambda: skeleton.sync(store))
+            lines.insert(idx, lines[idx].split("return", 1)[0] + "    pass  # benchmark body mutation\n")
+            body_one.write_text("".join(lines), encoding="utf-8", newline="")
+            elapsed, result = timed(lambda: skeleton.sync(store, budget=budget))
             records["one_function"].append({"run": repeat + 1, "seconds": elapsed,
                                              "parsed_files": result["parsed_files"], "suspect": len(result["suspect"])})
-            one.write_bytes(originals[one])
-            skeleton.sync(store)
+            body_one.write_bytes(originals[body_one])
+            skeleton.sync(store, budget=budget)
 
             for p in twenty:
-                p.write_bytes(originals[p] + b"\n# benchmark multi-file change\n")
-            elapsed, result = timed(lambda: skeleton.sync(store))
+                body = originals[p].decode("utf-8").splitlines(keepends=True)
+                for index, line in enumerate(body):
+                    if line.startswith((" ", "\t")) and line.strip():
+                        body.insert(index, line[:len(line)-len(line.lstrip())] + "    pass  # benchmark body mutation\n")
+                        break
+                p.write_text("".join(body), encoding="utf-8", newline="")
+            elapsed, result = timed(lambda: skeleton.sync(store, budget=budget))
             records["twenty_files"].append({"run": repeat + 1, "seconds": elapsed,
                                              "parsed_files": result["parsed_files"], "suspect": len(result["suspect"])})
             for p in twenty:
                 p.write_bytes(originals[p])
-            skeleton.sync(store)
+            skeleton.sync(store, budget=budget)
 
-            one.write_bytes(originals[one] + b"\n# benchmark cosmetic comment\n")
-            elapsed, result = timed(lambda: skeleton.sync(store))
+            cosmetic_one.write_bytes(originals[cosmetic_one] + b"\n# benchmark cosmetic comment\n")
+            with skeleton.connection(store) as db:
+                semantic_before = db.execute("SELECT count(*) FROM semantics s JOIN nodes n ON n.id=s.node_id JOIN files f ON f.id=n.file_id WHERE f.path=? AND s.status='current'", (cosmetic_one.relative_to(root).as_posix(),)).fetchone()[0]
+            elapsed, result = timed(lambda: skeleton.sync(store, budget=budget))
             records["cosmetic"].append({"run": repeat + 1, "seconds": elapsed,
-                                         "parsed_files": result["parsed_files"], "suspect": len(result["suspect"])})
-            one.write_bytes(originals[one])
-            skeleton.sync(store)
+                                         "parsed_files": result["parsed_files"], "suspect": len(result["suspect"]),
+                                         "semantic_before": semantic_before})
+            cosmetic_one.write_bytes(originals[cosmetic_one])
+            skeleton.sync(store, budget=budget)
     finally:
         for path, data in originals.items():
             path.write_bytes(data)
@@ -132,18 +170,22 @@ def main() -> int:
     parser.add_argument("root", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--budget", type=int, default=1000000,
+                        help="semantic token budget; 1,000,000 covers ten benchmark claims")
     args = parser.parse_args()
     root, output = args.root.resolve(), args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     inv = inventory(root)
-    runs = [run_init(root, output, i + 1) for i in range(args.repeats)]
+    runs = [run_init(root, output, i + 1, args.budget) for i in range(args.repeats)]
     store = open_project(runs[-1]["store"])
     query_runs = [query_benchmark(store, root) for _ in range(3)]
-    mutation_runs = mutation_benchmark(store, root, output)
+    semantic_runs = semantic_benchmark(store)
+    mutation_runs = mutation_benchmark(store, root, semantic_runs["semantic_paths"], args.budget)
     report = {"repository": str(root), "head": subprocess.check_output(
         ["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip(),
         "inventory": {k: inv[k] for k in ("files", "lines", "bytes")},
-        "init_runs": runs, "query_runs": query_runs, "mutation_runs": mutation_runs,
+        "init_runs": runs, "query_runs": query_runs, "semantic_runs": semantic_runs,
+        "mutation_runs": mutation_runs, "budget": args.budget,
         "python_lines": sum(r["lines"] for r in inv["rows"] if Path(r["path"]).suffix in (".py", ".pyi")),
     }
     (output / "BENCH_100K.raw.json").write_text(json.dumps(report, indent=2), encoding="utf-8")

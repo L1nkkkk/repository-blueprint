@@ -1,0 +1,598 @@
+{
+  "repository": "C:\\Users\\Link\\.codex\\worktrees\\ebbc\\\u9879\u76ee\u4ee3\u7801\u62c6\u89e3\u68b3\u7406\u5de5\u5177orSkills\\bench_mypy",
+  "head": "2ee4f4f4631099201b192528ae48ef65e2c3c60c",
+  "inventory": {
+    "files": 1922,
+    "lines": 632224,
+    "bytes": 20943439
+  },
+  "init_runs": [
+    {
+      "run": 1,
+      "seconds": 45.897804,
+      "map_sqlite_bytes": 203046912,
+      "wal_bytes": 0,
+      "files": 1481,
+      "nodes": 55523,
+      "edges": 326915,
+      "store": "C:\\Users\\Link\\.codex\\worktrees\\ebbc\\\u9879\u76ee\u4ee3\u7801\u62c6\u89e3\u68b3\u7406\u5de5\u5177orSkills\\bench_fix_runs3\\init-1"
+    },
+    {
+      "run": 2,
+      "seconds": 46.538459,
+      "map_sqlite_bytes": 203046912,
+      "wal_bytes": 0,
+      "files": 1481,
+      "nodes": 55523,
+      "edges": 326915,
+      "store": "C:\\Users\\Link\\.codex\\worktrees\\ebbc\\\u9879\u76ee\u4ee3\u7801\u62c6\u89e3\u68b3\u7406\u5de5\u5177orSkills\\bench_fix_runs3\\init-2"
+    },
+    {
+      "run": 3,
+      "seconds": 46.541137,
+      "map_sqlite_bytes": 203046912,
+      "wal_bytes": 0,
+      "files": 1481,
+      "nodes": 55523,
+      "edges": 326915,
+      "store": "C:\\Users\\Link\\.codex\\worktrees\\ebbc\\\u9879\u76ee\u4ee3\u7801\u62c6\u89e3\u68b3\u7406\u5de5\u5177orSkills\\bench_fix_runs3\\init-3"
+    }
+  ],
+  "query_runs": [
+    {
+      "samples": {
+        "find_symbol_exact": [
+          1.372,
+          1.484,
+          1.455,
+          1.759,
+          1.652,
+          1.353,
+          1.507,
+          1.922,
+          1.704,
+          1.557,
+          1.795,
+          1.461,
+          1.904,
+          1.75,
+          1.521,
+          1.364,
+          1.524,
+          1.47,
+          1.695,
+          1.489
+        ],
+        "find_symbol_fuzzy": [
+          57.224,
+          56.765,
+          56.78,
+          56.313,
+          56.603,
+          56.034,
+          56.68,
+          56.692,
+          60.796,
+          59.904,
+          56.454,
+          69.798,
+          57.036,
+          56.086,
+          58.042,
+          57.481,
+          57.393,
+          57.455,
+          57.28,
+          56.824
+        ],
+        "callers": [
+          10.876,
+          10.539,
+          11.298,
+          11.655,
+          11.246,
+          10.811,
+          10.728,
+          11.408,
+          10.885,
+          11.038,
+          13.298,
+          16.157,
+          11.056,
+          11.175,
+          11.585,
+          11.132,
+          11.141,
+          10.766,
+          10.764,
+          10.239
+        ],
+        "callees": [
+          3.321,
+          3.037,
+          3.561,
+          2.881,
+          3.142,
+          3.051,
+          3.737,
+          3.014,
+          3.452,
+          3.113,
+          4.916,
+          4.352,
+          3.247,
+          2.793,
+          3.619,
+          3.015,
+          2.934,
+          3.61,
+          3.537,
+          2.884
+        ],
+        "search": [
+          3.185,
+          3.872,
+          3.182,
+          4.137,
+          4.327,
+          3.634,
+          3.487,
+          3.412,
+          3.32,
+          3.499
+        ]
+      },
+      "median_ms": {
+        "find_symbol_exact": 1.5225,
+        "find_symbol_fuzzy": 56.93,
+        "callers": 11.094,
+        "callees": 3.1944999999999997,
+        "search": 3.4930000000000003
+      },
+      "repo_map": [
+        {
+          "path": "",
+          "seconds": 0.336867
+        },
+        {
+          "path": "mypy",
+          "seconds": 0.234343
+        },
+        {
+          "path": "mypyc",
+          "seconds": 0.057821
+        },
+        {
+          "path": "test-data/unit",
+          "seconds": 0.014184
+        }
+      ],
+      "source": "C:\\Users\\Link\\.codex\\worktrees\\ebbc\\\u9879\u76ee\u4ee3\u7801\u62c6\u89e3\u68b3\u7406\u5de5\u5177orSkills\\bench_mypy"
+    },
+    {
+      "samples": {
+        "find_symbol_exact": [
+          1.829,
+          1.426,
+          1.59,
+          1.381,
+          1.7,
+          1.537,
+          1.405,
+          1.772,
+          1.425,
+          1.434,
+          1.587,
+          1.7,
+          1.64,
+          1.691,
+          1.33,
+          1.86,
+          2.016,
+          1.494,
+          1.392,
+          1.719
+        ],
+        "find_symbol_fuzzy": [
+          57.24,
+          56.987,
+          57.381,
+          57.115,
+          57.076,
+          56.193,
+          56.487,
+          57.334,
+          56.279,
+          57.805,
+          59.998,
+          57.859,
+          56.524,
+          55.57,
+          56.946,
+          55.749,
+          57.367,
+          57.425,
+          56.321,
+          56.252
+        ],
+        "callers": [
+          10.119,
+          10.595,
+          11.602,
+          10.878,
+          11.048,
+          10.174,
+          10.547,
+          10.279,
+          11.209,
+          11.221,
+          10.103,
+          10.574,
+          10.805,
+          10.201,
+          10.921,
+          11.088,
+          10.653,
+          10.254,
+          10.94,
+          10.863
+        ],
+        "callees": [
+          3.266,
+          3.186,
+          3.476,
+          3.093,
+          3.512,
+          3.007,
+          2.939,
+          2.897,
+          3.466,
+          3.178,
+          3.454,
+          2.726,
+          2.941,
+          3.227,
+          2.902,
+          3.19,
+          3.698,
+          3.217,
+          3.095,
+          3.375
+        ],
+        "search": [
+          3.739,
+          3.594,
+          3.492,
+          3.006,
+          3.66,
+          3.714,
+          3.13,
+          3.083,
+          3.309,
+          3.964
+        ]
+      },
+      "median_ms": {
+        "find_symbol_exact": 1.5885,
+        "find_symbol_fuzzy": 57.0315,
+        "callers": 10.729,
+        "callees": 3.1879999999999997,
+        "search": 3.543
+      },
+      "repo_map": [
+        {
+          "path": "",
+          "seconds": 0.330072
+        },
+        {
+          "path": "mypy",
+          "seconds": 0.239667
+        },
+        {
+          "path": "mypyc",
+          "seconds": 0.058605
+        },
+        {
+          "path": "test-data/unit",
+          "seconds": 0.014961
+        }
+      ],
+      "source": "C:\\Users\\Link\\.codex\\worktrees\\ebbc\\\u9879\u76ee\u4ee3\u7801\u62c6\u89e3\u68b3\u7406\u5de5\u5177orSkills\\bench_mypy"
+    },
+    {
+      "samples": {
+        "find_symbol_exact": [
+          1.54,
+          1.372,
+          1.774,
+          1.898,
+          1.56,
+          1.631,
+          1.715,
+          1.335,
+          1.932,
+          1.521,
+          1.452,
+          1.402,
+          1.752,
+          1.726,
+          1.677,
+          1.624,
+          1.399,
+          1.299,
+          1.499,
+          1.448
+        ],
+        "find_symbol_fuzzy": [
+          57.866,
+          56.598,
+          57.584,
+          58.654,
+          57.263,
+          56.974,
+          57.938,
+          56.937,
+          56.654,
+          57.539,
+          57.338,
+          56.885,
+          59.023,
+          62.295,
+          57.197,
+          57.975,
+          59.72,
+          57.73,
+          58.43,
+          57.558
+        ],
+        "callers": [
+          10.786,
+          10.266,
+          11.028,
+          10.868,
+          10.069,
+          10.537,
+          10.834,
+          11.08,
+          10.749,
+          10.318,
+          11.062,
+          10.496,
+          11.254,
+          11.43,
+          10.511,
+          10.268,
+          10.473,
+          11.234,
+          11.231,
+          11.076
+        ],
+        "callees": [
+          2.715,
+          3.185,
+          2.946,
+          3.257,
+          3.258,
+          2.983,
+          2.879,
+          3.159,
+          3.208,
+          3.156,
+          3.045,
+          3.17,
+          3.067,
+          3.239,
+          3.643,
+          2.785,
+          3.143,
+          2.967,
+          3.331,
+          2.871
+        ],
+        "search": [
+          2.966,
+          3.144,
+          3.949,
+          3.093,
+          3.334,
+          3.062,
+          3.433,
+          3.312,
+          3.482,
+          3.531
+        ]
+      },
+      "median_ms": {
+        "find_symbol_exact": 1.55,
+        "find_symbol_fuzzy": 57.571,
+        "callers": 10.809999999999999,
+        "callees": 3.1494999999999997,
+        "search": 3.323
+      },
+      "repo_map": [
+        {
+          "path": "",
+          "seconds": 0.339876
+        },
+        {
+          "path": "mypy",
+          "seconds": 0.237742
+        },
+        {
+          "path": "mypyc",
+          "seconds": 0.0617
+        },
+        {
+          "path": "test-data/unit",
+          "seconds": 0.015212
+        }
+      ],
+      "source": "C:\\Users\\Link\\.codex\\worktrees\\ebbc\\\u9879\u76ee\u4ee3\u7801\u62c6\u89e3\u68b3\u7406\u5de5\u5177orSkills\\bench_mypy"
+    }
+  ],
+  "semantic_runs": {
+    "rows": [
+      {
+        "batch": 1,
+        "claim_seconds": 0.2129467000195291,
+        "submit_seconds": 0.006915900012245402,
+        "accepted": 1,
+        "path": "test-data/unit/fixtures/isinstance_python3_10.pyi",
+        "node_id": "symbol:007444886659c956124d614b"
+      },
+      {
+        "batch": 2,
+        "claim_seconds": 0.20036889999755658,
+        "submit_seconds": 0.007014200004050508,
+        "accepted": 1,
+        "path": "test-data/unit/fixtures/len.pyi",
+        "node_id": "symbol:1efdf773197a4decccd4a56c"
+      },
+      {
+        "batch": 3,
+        "claim_seconds": 0.2051690999942366,
+        "submit_seconds": 0.008079899998847395,
+        "accepted": 1,
+        "path": "test-data/unit/fixtures/tuple.pyi",
+        "node_id": "symbol:251b3813add1aac7b8438ab4"
+      },
+      {
+        "batch": 4,
+        "claim_seconds": 0.20786549997865222,
+        "submit_seconds": 0.018708800023887306,
+        "accepted": 1,
+        "path": "test-data/unit/fixtures/primitives.pyi",
+        "node_id": "symbol:2f7640deffc85692ccf26196"
+      },
+      {
+        "batch": 5,
+        "claim_seconds": 0.2259294000105001,
+        "submit_seconds": 0.008250000013504177,
+        "accepted": 1,
+        "path": "test-data/unit/fixtures/callable.pyi",
+        "node_id": "symbol:690eb6d5698ae753938b40f0"
+      },
+      {
+        "batch": 6,
+        "claim_seconds": 0.2204208000039216,
+        "submit_seconds": 0.0067869000195059925,
+        "accepted": 1,
+        "path": "test-data/unit/fixtures/type.pyi",
+        "node_id": "symbol:8d6daf6a1d744fa0729425a4"
+      },
+      {
+        "batch": 7,
+        "claim_seconds": 0.20086209999863058,
+        "submit_seconds": 0.007914499990874901,
+        "accepted": 1,
+        "path": "mypy/typeshed/stdlib/builtins.pyi",
+        "node_id": "symbol:a6ca9067974cd724654c63c9"
+      },
+      {
+        "batch": 8,
+        "claim_seconds": 0.20032060000812635,
+        "submit_seconds": 0.0075369999976828694,
+        "accepted": 1,
+        "path": "test-data/unit/fixtures/narrowing.pyi",
+        "node_id": "symbol:a9d8220e45b492888e9e22e9"
+      },
+      {
+        "batch": 9,
+        "claim_seconds": 0.19893949999823235,
+        "submit_seconds": 0.006871600024169311,
+        "accepted": 1,
+        "path": "test-data/unit/fixtures/dict.pyi",
+        "node_id": "symbol:b5db9a1bebe1dcc4b2d17cf4"
+      },
+      {
+        "batch": 10,
+        "claim_seconds": 0.1998533000005409,
+        "submit_seconds": 0.00698730000294745,
+        "accepted": 1,
+        "path": "test-data/unit/fixtures/dict-full.pyi",
+        "node_id": "symbol:b9dc25661930963578fc87a1"
+      }
+    ],
+    "first_submit_seconds": 0.006915900012245402,
+    "last_submit_seconds": 0.00698730000294745,
+    "semantic_paths": [
+      "test-data/unit/fixtures/isinstance_python3_10.pyi",
+      "test-data/unit/fixtures/len.pyi",
+      "test-data/unit/fixtures/tuple.pyi",
+      "test-data/unit/fixtures/primitives.pyi",
+      "test-data/unit/fixtures/callable.pyi",
+      "test-data/unit/fixtures/type.pyi",
+      "mypy/typeshed/stdlib/builtins.pyi",
+      "test-data/unit/fixtures/narrowing.pyi",
+      "test-data/unit/fixtures/dict.pyi",
+      "test-data/unit/fixtures/dict-full.pyi"
+    ]
+  },
+  "mutation_runs": {
+    "one_function": [
+      {
+        "run": 1,
+        "seconds": 3.320878,
+        "parsed_files": 1,
+        "suspect": 0
+      },
+      {
+        "run": 2,
+        "seconds": 3.345332,
+        "parsed_files": 1,
+        "suspect": 0
+      },
+      {
+        "run": 3,
+        "seconds": 3.278859,
+        "parsed_files": 1,
+        "suspect": 0
+      }
+    ],
+    "twenty_files": [
+      {
+        "run": 1,
+        "seconds": 3.849471,
+        "parsed_files": 19,
+        "suspect": 3
+      },
+      {
+        "run": 2,
+        "seconds": 3.766064,
+        "parsed_files": 19,
+        "suspect": 3
+      },
+      {
+        "run": 3,
+        "seconds": 3.761112,
+        "parsed_files": 19,
+        "suspect": 3
+      }
+    ],
+    "cosmetic": [
+      {
+        "run": 1,
+        "seconds": 3.312392,
+        "parsed_files": 1,
+        "suspect": 0,
+        "semantic_before": 1
+      },
+      {
+        "run": 2,
+        "seconds": 3.343592,
+        "parsed_files": 1,
+        "suspect": 0,
+        "semantic_before": 1
+      },
+      {
+        "run": 3,
+        "seconds": 3.278886,
+        "parsed_files": 1,
+        "suspect": 0,
+        "semantic_before": 1
+      }
+    ]
+  },
+  "budget": 1000000,
+  "python_lines": 265447
+}
