@@ -36,7 +36,9 @@ def tool(name, description, properties, required, *, read_only=False, idempotent
 TOOLS = [
     tool('init', 'Inventory an entire local repository and create a durable map. This does not analyze code. Reopens an existing map only for the same repository and exclusions.',
          {'root': string('Absolute repository directory.'), 'output': string('Absolute new map directory. Default: root/.codemap.'),
-          'exclude': {'type': 'array', 'items': string('Explicit exclusion pattern.'), 'default': []}, 'detail': DETAIL}, ['root'], idempotent=True),
+          'exclude': {'type': 'array', 'items': string('Explicit exclusion pattern.'), 'default': []},
+          'budget': integer(0, 0, 100000000), 'langs': {'type':'array','items':string('Language')},
+          'include': {'type':'array','items':string('Relative glob')}, 'detail': DETAIL}, ['root'], idempotent=True),
     tool('status', 'Read coverage, task state and revision. Check the source snapshot before resuming or delivering. A queue is not a running AI.',
          {'project': PROJECT, 'check_snapshot': {'type': 'boolean', 'default': True}, 'detail': DETAIL}, ['project'], read_only=True),
     tool('update', 'Preview classified file changes, rename matches and recorded dependency impact; apply the exact preview to archive the graph and queue rereading. History lists snapshots, compare returns differences and restore_id, restore creates a new graph revision without changing source files. Preserve layouts and identities. No AI is started. Resolve scan gaps before applying and pause active readers before restoring.',
@@ -62,8 +64,8 @@ TOOLS = [
           'offset': integer(0, 0, 100000000), 'limit': integer(30, 1, 100),
           'index_id': string('Query cursor identity from the preceding page.'),
           'snapshot_id': string('Build cursor identity from the preceding page.')}, ['project'], idempotent=True),
-    tool('search', 'Literal case-insensitive source search. Check truncated and failures; no matches is not proof of no references.',
-         {'project': PROJECT, 'query': string('Literal search text.'), 'paths': string('Repository-relative glob; default *.'),
+    tool('search', 'FTS5 symbol/signature/summary search. Set paths for legacy literal source search.',
+         {'project': PROJECT, 'query': string('Literal search text.'), 'paths': string('Explicitly select literal source search with a repository-relative glob.'),
           'limit': integer(100, 1, 500)}, ['project', 'query'], read_only=True),
     tool('query', 'Read saved graph records for cross-file review, evidence, and resumption. Optional ids selects exact IDs; filter matches top-level fields (including membership in array fields). Page at one revision.',
          {'project': PROJECT, 'table': {'type': 'string', 'enum': TABLES},
@@ -100,6 +102,27 @@ TOOLS = [
          {'topic': {'type': 'string', 'enum': ['workflow', 'graph-format', 'task-protocol', 'commands', 'preparation', 'structure', 'reading-pack', 'catalog']},
           'start': integer(1, 1, 100000000), 'limit': integer(160, 1, 500)}, ['topic'], read_only=True),
 ]
+
+TOOLS += [
+    tool('find_symbol', 'Find persistent symbols and explicitly versioned semantic summaries.',
+         {'project':PROJECT,'name':string('Name or symbol ID'),'fuzzy':{'type':'boolean','default':False},
+          'kind':string('Symbol kind'),'limit':integer(30,1,500)},['project','name'],read_only=True),
+    *[tool(direction, 'Bounded syntax call chain; every edge includes confidence.',
+         {'project':PROJECT,'symbol':string('Unique name or exact symbol ID'),'depth':integer(1,1,3),
+          'limit':integer(100,1,500)},['project','symbol'],read_only=True) for direction in ('callers','callees')],
+    tool('repo_map','Compressed directory/signature map within a conservative token upper bound.',
+         {'project':PROJECT,'path':{'type':'string'},'budget_tokens':integer(2000,0,32000)},['project'],read_only=True),
+    tool('sync','Reconcile the persistent skeleton and queue only missing/stale/suspect semantics. No AI is started.',
+         {'project':PROJECT,'budget':integer(0,0,100000000)},['project'],idempotent=True),
+    tool('doctor','Check relational constraints, semantic hashes and FTS consistency.',
+         {'project':PROJECT},['project'],read_only=True),
+    tool('semantic_claim','Claim exact source slices under a token reservation and expiring lease; usable by any host.',
+         {'project':PROJECT,'worker':string('Executor identity'),'n':integer(1,1,20),
+          'lease_seconds':integer(1800,1,3600)},['project','worker']),
+    tool('semantic_submit','Atomically submit hash-bound summaries and evidence; retry with identical batch_id/payload.',
+         {'project':PROJECT,'batch':{'type':'object'}},['project','batch'],idempotent=True),
+]
+
 
 
 def validate_input(value, schema, path='arguments'):
@@ -166,6 +189,16 @@ class AgentTools:
             span.finish(result)
             return result
         store = open_project(absolute(args['project']))
+        if name in {'find_symbol','callers','callees','repo_map','sync','doctor','semantic_claim','semantic_submit'} or (name == 'search' and 'paths' not in args):
+            from . import skeleton, executor
+            options = {k:v for k,v in args.items() if k != 'project'}
+            if name in {'callers','callees'}:
+                return skeleton.calls(store, direction=name, **options)
+            if name == 'semantic_claim':
+                return executor.claim(store, **options)
+            if name == 'semantic_submit':
+                return executor.submit(store, **options)
+            return getattr(skeleton,name)(store, **options)
         if name == 'metrics':
             from .metrics import report
             return report(store, session=args.get('session'), limit=args.get('limit', 40))
@@ -219,9 +252,11 @@ class AgentTools:
                     if output.is_relative_to(root):
                         patterns.append(output.relative_to(root).as_posix())
                     require(set(patterns) == set(graph['inventory']['exclusion_patterns']), 'Existing map has different exclusions; choose a new output.')
+                from .skeleton import sync
+                sync(store, budget=args.get('budget',0), langs=args.get('langs'), include=args.get('include'))
                 reopened = True
             else:
-                store = initialize_project(root, output, excludes=args.get('exclude', []))
+                store = initialize_project(root, output, excludes=args.get('exclude', []), budget=args.get('budget',0), langs=args.get('langs'), include=args.get('include'))
                 reopened = False
             return {'project_directory': str(output), 'reopened': reopened, **status_view(status(store, check_snapshot=True), args.get('detail', 'summary'))}
         directory = absolute(args['project'])

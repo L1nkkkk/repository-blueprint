@@ -79,7 +79,10 @@ class AgentIntegrationTests(unittest.TestCase):
 
     def test_relocated_package_exposes_tools_and_all_guides_without_checkout(self):
         tools = self.client.rpc('tools/list', {})['tools']
-        self.assertEqual(len(tools), 17)
+        self.assertEqual(len(tools), 25)
+        self.assertTrue({'blueprint_find_symbol','blueprint_callers','blueprint_callees',
+                         'blueprint_repo_map','blueprint_sync','blueprint_doctor',
+                         'blueprint_semantic_claim','blueprint_semantic_submit'} <= {t['name'] for t in tools})
         index = self.client.call('index', project=self.map, source='值.py')
         self.assertEqual(index['records'][0]['name'], 'x')
         self.assertEqual(index['state'], 'parsed')

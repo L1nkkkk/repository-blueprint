@@ -160,7 +160,7 @@ class BatchProtocolTests(unittest.TestCase):
         task = next(t for t in claimed["tasks"] if t["id"] == "task:diagnostics")
         batch = deepcopy(self.batch)
         batch.update(task_id=task["id"], lease_id=task["lease"]["id"], upserts={})
-        with self.assertRaisesRegex(ProtocolError, "analysis depth"):
+        with self.assertRaisesRegex(ProtocolError, "task completion requires this scope node status"):
             apply_batch(claimed, batch, now=101)
 
 

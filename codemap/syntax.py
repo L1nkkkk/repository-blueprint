@@ -1,6 +1,7 @@
 """Bounded, non-executing syntax extraction. Syntax sites are not resolved flows."""
 
 import ast
+from hashlib import sha256
 from collections import Counter
 import importlib
 from importlib.metadata import version, PackageNotFoundError
@@ -8,7 +9,7 @@ import sys
 
 from .core import digest
 
-VERSION = 'structure-1'
+VERSION = 'structure-2'
 BACKENDS = {'cpp': ('tree_sitter_cpp', 'language'), 'csharp': ('tree_sitter_c_sharp', 'language'),
             'javascript': ('tree_sitter_javascript', 'language'),
             'typescript': ('tree_sitter_typescript', 'language_typescript'),
@@ -41,8 +42,13 @@ def capabilities():
 
 
 class Output:
-    def __init__(self, source_id):
+    def __init__(self, source_id, text=''):
         self.source_id = source_id
+        self.raw = text.encode('utf-8')
+        self.lines = self.raw.splitlines(keepends=True)
+        self.offsets = [0]
+        for line in self.lines:
+            self.offsets.append(self.offsets[-1] + len(line))
         self.symbols, self.sites, self.diagnostics = [], [], []
         self.counts = Counter()
         self.ordinals = Counter()
@@ -52,7 +58,7 @@ class Output:
         if len(self.diagnostics) < 50:
             self.diagnostics.append({'message': message, 'line': line})
 
-    def symbol(self, kind, name, parent, start, end, signature='', parameters=(), declaration_kind=''):
+    def symbol(self, kind, name, parent, start, end, signature='', parameters=(), declaration_kind='', start_byte=None, end_byte=None):
         if len(self.symbols) >= MAX_SYMBOLS:
             raise ValueError('Symbol limit reached; remaining declarations require review.')
         name = name.strip() or '<anonymous>'
@@ -68,6 +74,10 @@ class Output:
                'signature_truncated': len(signature) > 1200, 'parameters': list(parameters)[:100],
                'parameter_count': len(parameters), 'declaration_kind': declaration_kind}
         self.symbols.append(row)
+        start_byte = self.offsets[start - 1] if start_byte is None else start_byte
+        end_byte = self.offsets[min(end, len(self.lines))] if end_byte is None else end_byte
+        row.update(start_byte=start_byte, end_byte=end_byte,
+                   body_sha=sha256(self.raw[start_byte:end_byte]).hexdigest())
         return row
 
     def site(self, kind, text, parent, start, end):
@@ -105,7 +115,9 @@ def python_parse(text, output):
                          'def ' + node.name + '(' + ast.unparse(node.args) + ')' +
                          (' -> ' + ast.unparse(node.returns) if node.returns else ''))
             start = min([node.lineno, *[d.lineno for d in node.decorator_list]])
-            new_parent = output.symbol(kind, node.name, parent, start, node.end_lineno, signature, params, type(node).__name__)
+            begin = output.offsets[start - 1] + (node.col_offset if start == node.lineno else max(0, node.decorator_list[0].col_offset - 1))
+            finish = output.offsets[node.end_lineno - 1] + node.end_col_offset
+            new_parent = output.symbol(kind, node.name, parent, start, node.end_lineno, signature, params, type(node).__name__, begin, finish)
         elif isinstance(node, (ast.Assign, ast.AnnAssign)) and (parent is None or parent['kind'] in TYPES):
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
             for target in targets:
@@ -113,7 +125,9 @@ def python_parse(text, output):
                     annotation = getattr(node, 'annotation', None)
                     signature = target.id + (': ' + ast.unparse(annotation) if annotation else '')
                     output.symbol('field' if parent else 'variable', target.id, parent,
-                                  node.lineno, node.end_lineno, signature, declaration_kind=type(node).__name__)
+                                  node.lineno, node.end_lineno, signature, declaration_kind=type(node).__name__,
+                                  start_byte=output.offsets[node.lineno - 1] + node.col_offset,
+                                  end_byte=output.offsets[node.end_lineno - 1] + node.end_col_offset)
         elif isinstance(node, ast.Call):
             output.site('call', ast.unparse(node.func), parent, node.lineno, node.end_lineno)
         elif isinstance(node, (ast.Import, ast.ImportFrom)):
@@ -237,7 +251,18 @@ def tree_parse(text, key, output):
             if kind in TYPES | {'namespace'}:
                 signature = ' '.join(signature.split())
             new_parent = output.symbol(kind, name, parent, declaration.start_point.row + 1, line_end(node),
-                                       signature, parameters, declaration.type)
+                                       signature, parameters, declaration.type, declaration.start_byte, node.end_byte)
+            # Parse-tree leaves preserve string/operator contents but discard cosmetic whitespace/comments.
+            leaves, stack = [], [declaration]
+            while stack:
+                part = stack.pop()
+                if 'comment' in part.type:
+                    continue
+                if not part.children:
+                    leaves.append((part.type, content(part)))
+                else:
+                    stack.extend(reversed(part.children))
+            new_parent['semantic_sha'] = digest(leaves)
             if node.type == 'file_scoped_namespace_declaration':
                 new_parent['end_line'] = max(1, len(text.splitlines()))
                 file_namespace = new_parent
@@ -260,7 +285,7 @@ def tree_parse(text, key, output):
 
 def parse(source, text):
     engine = backend(source['language'], source['path'])
-    output = Output(source['id'])
+    output = Output(source['id'], text)
     state = 'parsed'
     if not engine['available']:
         state = 'unavailable' if 'key' in engine else 'unsupported'

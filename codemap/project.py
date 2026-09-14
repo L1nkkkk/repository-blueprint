@@ -13,7 +13,7 @@ from .updates import scan_update, update_plan, impact
 from .change_analysis import snapshot_texts
 
 
-def initialize_project(root, output=None, *, excludes=()):
+def initialize_project(root, output=None, *, excludes=(), budget=0, langs=None, include=None):
     root = Path(root).resolve(strict=True)
     output = Path(output).resolve() if output else root / '.codemap'
     require(output != root, 'project output cannot replace repository root')
@@ -26,9 +26,8 @@ def initialize_project(root, output=None, *, excludes=()):
     store = GraphStore(output / 'map.sqlite')
     store.initialize(graph)
     store.save_source_texts(snapshot_texts(graph))
-    from .structure import build_index
-    # Bound initialization; larger inventories continue through the index cursor.
-    build_index(store, limit=100)
+    from .skeleton import sync
+    sync(store, budget=budget, langs=langs, include=include)
     return store
 
 
@@ -85,6 +84,8 @@ def status(store, *, check_snapshot=False):
               'execution': 'paused' if graph['project']['execution'] == 'paused' else 'worker_lease_active' if live else 'waiting_for_reader',
               'expired_tasks': [t['id'] for t in graph['tasks'] if t['state'] == 'running' and t['lease']['expires_at'] <= now],
               'inventory': graph.get('inventory', {}), 'last_update': graph.get('last_update')}
+    from .skeleton import summary as skeleton_summary
+    result['skeleton'] = skeleton_summary(store)
     if check_snapshot:
         result['snapshot'] = snapshot_status(graph)
         if result['snapshot']['state'] != 'current':

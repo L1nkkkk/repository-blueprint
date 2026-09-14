@@ -15,6 +15,8 @@ MAX_MESSAGE = 8 * 1024 * 1024
 INSTRUCTIONS = (
     'Read local repositories and save evidence-backed blueprints. Read blueprint_guide(topic="workflow") '
     'for the portable repository-blueprint Skill; no Codex installation or host-specific Skill loader is needed. '
+    'init builds a zero-model-cost persistent skeleton. Query find_symbol/callers/callees/search/repo_map without a lease; search(paths=...) retains literal source search. '
+    'Use sync(budget=...) then semantic_claim/semantic_submit for hash-bound summaries from any host; no model is started. '
     'Start/resume with blueprint_init/status; use blueprint_update to preview/apply source changes in the same map. Use blueprint_guide for schemas, next for a real reading lease, '
     'next includes a module reading_pack with source, structure and saved findings; continue with blueprint_pack and reuse delivered source/complete records instead of repeating read/query. '
     'Use context/query or read/search for material outside the pack, prepare for mechanical batch fields, and commit(prepared_id=...) for atomic results. '

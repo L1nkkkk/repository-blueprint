@@ -1,5 +1,8 @@
 # Repository Blueprint · 代码蓝图
 
+新增持久骨架层：`init` 一次生成全部可解析符号，零模型调用；MCP 提供符号、调用链、全文搜索和压缩仓库地图。`sync` 按内容哈希更新并标记 stale/suspect，任意宿主可以在预算内领取节点语义任务。详见 [使用说明](SKELETON.md)、[验收记录](SKELETON_ACCEPTANCE.md) 和 [原始改造方案](SKELETON_PLAN.md)。
+
+
 Local, evidence-backed code maps for MCP agents. Explore repository structure, call contexts, and data flows on an interactive canvas.
 
 用 AI 逐模块阅读整个仓库，整理成可分层探索、追踪数据并核对源码的蓝图画布。

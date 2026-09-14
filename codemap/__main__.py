@@ -29,6 +29,14 @@ def main(argv=None):
     init.add_argument('root', type=Path)
     init.add_argument('--output', type=Path)
     init.add_argument('--exclude', action='append', default=[], help='明确排除的相对路径或通配符，可重复')
+    init.add_argument('--budget', type=int, default=0)
+    init.add_argument('--langs', help='Comma-separated languages')
+    init.add_argument('--include', action='append')
+    for name in ('sync', 'doctor'):
+        sub = commands.add_parser(name)
+        sub.add_argument('project', type=Path)
+        if name == 'sync':
+            sub.add_argument('--budget', type=int, default=0)
     validate = commands.add_parser('validate', help='校验 JSON 交换文件')
     validate.add_argument('graph', type=Path)
     validate.add_argument('--source-root', type=Path)
@@ -104,12 +112,29 @@ def main(argv=None):
             validate_graph(graph, args.source_root)
             result = completion_report(graph)
         elif args.command == 'init':
-            store = initialize_project(args.root, args.output, excludes=args.exclude)
+            output = args.output or args.root / '.codemap'
+            if (output / 'map.sqlite').is_file():
+                store = open_project(output)
+                if Path(store.read()['project']['source_root']).resolve() != args.root.resolve():
+                    raise ValueError('Existing map belongs to a different repository')
+                if args.exclude:
+                    patterns = list(args.exclude)
+                    if output.resolve().is_relative_to(args.root.resolve()):
+                        patterns.append(output.resolve().relative_to(args.root.resolve()).as_posix())
+                    if set(patterns) != set(store.read()['inventory']['exclusion_patterns']):
+                        raise ValueError('Existing map has different exclusions; choose a new output')
+                from .skeleton import sync
+                sync(store, budget=args.budget, langs=args.langs.split(',') if args.langs else None, include=args.include)
+            else:
+                store = initialize_project(args.root, args.output, excludes=args.exclude, budget=args.budget, langs=args.langs.split(',') if args.langs else None, include=args.include)
             result = {'project_directory': str(Path(store.path).parent), **status(store)}
         else:
             store = open_project(args.project)
             graph = store.read()
-            if args.command == 'status':
+            if args.command in {'sync', 'doctor'}:
+                from .skeleton import sync, doctor
+                result = sync(store, budget=args.budget) if args.command == 'sync' else doctor(store)
+            elif args.command == 'status':
                 result = status(store, check_snapshot=args.check_snapshot)
             elif args.command == 'metrics':
                 from .metrics import report
@@ -170,10 +195,10 @@ def main(argv=None):
                 serve(store, port=args.port)
                 return 0
         print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 0
+        return 1 if args.command == 'doctor' and not result['ok'] else 0
     except (ProtocolError, OSError, ValueError, KeyError) as error:
         parser.exit(1, f'代码蓝图：{error}\n')
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

@@ -63,7 +63,7 @@ Allowed upsert tables are `sources`, `entities`, `memberships`, `contexts`, `por
 
 `result` is `partial`, `blocked` or `done`. Incomplete work requires a useful reason. New tasks must be queued and required. A completed file task requires reviewed current scope entities, fully read sources and complete symbol coverage. All new and reused evidence is checked against current disk content at commit. The checker validates structure and source locations; the reader remains responsible for semantic accuracy.
 
-`read` returns at most 500 lines per call with `next_start`, the exact SHA-256 and total lines; it never changes reading progress. Text support is UTF-8 and BOM-marked UTF-16, up to 2 MiB per file. Unreadable source files remain required blocked work. Search is a literal, case-insensitive search and returns `truncated` plus file failures. Do not treat an empty or limited result as proof of no usages.
+`read` returns at most 500 lines per call with `next_start`, the exact SHA-256 and total lines; it never changes reading progress. Text support is UTF-8 and BOM-marked UTF-16, up to 2 MiB per file. Unreadable source files remain required blocked work. Search with `paths="*"` is a literal, case-insensitive source search (without paths, blueprint_search uses the persistent symbol/signature/summary FTS index) and returns `truncated` plus file failures. Do not treat an empty or limited result as proof of no usages.
 
 An empty text file is represented as one blank logical line with `empty_file=true`; line 1 and its exact fingerprint can support an empty-file review. It does not contain a declaration to invent.
 
