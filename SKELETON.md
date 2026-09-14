@@ -1,32 +1,33 @@
 # 持久骨架与语义层
 
-`python -m codemap init REPO --budget 0`（插件内为 `scripts/run.py init`）扫描全仓库并持久化全部可解析符号，不启动模型。首次创建后立刻可通过 MCP 查询。现有工程可运行 `python -m codemap sync MAP --budget 20000` 升级或更新骨架。`python -m codemap doctor MAP` 检查外键、边端点、语义与任务哈希、FTS 一致性；有问题时退出码为 1。
+`python -m codemap init REPO --budget 0`（插件内为 `scripts/run.py init`）扫描全仓库并持久化全部可解析符号，不启动模型。首次创建后立刻可通过 MCP 查询。当前精简格式的工程可运行 `python -m codemap sync MAP --budget 20000` 更新骨架。精简改造前的工程需要 `init REPO --output NEW_MAP` 重建；工具拒绝原地升级，原工程的图、语义和历史保持不变。`python -m codemap doctor MAP` 检查外键、边端点、语义与任务哈希、FTS 一致性；有问题时退出码为 1。
 
 ## 命令与接口
 
-- `init REPO [--output MAP] [--exclude GLOB] [--include GLOB] [--langs python,cpp] [--budget N]`：新建或重开同仓库的骨架。include/langs 仅筛选骨架层，exclude 是原有全仓库清单排除策略；既有工程的筛选配置由 sync 保留。
+- `init REPO [--output MAP] [--exclude GLOB] [--include GLOB] [--langs python,cpp] [--budget N] [--legacy-cache]`：新建或重开同仓库的骨架。include/langs 仅筛选骨架层，exclude 是原有全仓库清单排除策略；既有工程的筛选配置由 sync 保留。
 - `sync MAP [--budget N]`：全树哈希对账，只解析新增、内容或解析器版本变化的文件。默认预算为 0，每次显式调用为新一轮预算；已运行租约的预留属于此前一轮。
 - `blueprint_find_symbol(project, name, fuzzy?, kind?, limit?)`：名称、限定名或精确 ID。重名时使用返回的 ID。
 - `blueprint_callers` / `blueprint_callees(project, symbol, depth=1, limit=100)`：最多三跳，循环去重，每条边附带 confidence。目标不唯一时拒绝猜测。
 - `blueprint_search(project, query, limit=100)`：FTS5 检索限定名、签名、最新摘要。查询按字面词组处理，不执行用户提供的 FTS 运算符。保留 `paths="*"` 参数时走原来的源码字面搜索；CLI `search` 仍是源码搜索。
-- `blueprint_repo_map(project, path?, budget_tokens=2000)`：按调用入度选择路径、行号与关键签名。使用 UTF-8 字节数作为保守 token 上界，可能少用预算；返回 truncated。
+- `blueprint_repo_map(project, path?, budget_tokens=2000)`：按物化调用入度选择路径、行号与关键签名；入度随边插入/删除维护。path 按目录前缀规范化，并通过文件路径索引的范围条件过滤。使用 UTF-8 字节数作为保守 token 上界，可能少用预算；返回 truncated。
 - `blueprint_sync(project, budget=0)` / `blueprint_doctor(project)`：MCP 对应同步和检查。
+- `reindex MAP` / `blueprint_reindex(project)`：显式全量重建 FTS，用于修复索引。常规 sync 和 submit 按 node_id 经索引定位 FTS rowid，定向删除、插入受影响行。
 
 五个查询工具直接读关系表，不领取任务、不执行代码、不读取整图 JSON。所有返回的摘要都嵌套在 `semantics` 内并带 `status`；尚未生成则为 null。摘要全文检索可能命中 stale/suspect 记录，调用者必须检查状态。查询反映最后一次同步的快照；外部文件修改后应先 sync。
 
 ## 可复现的机器事实
 
-SQLite WAL 中新增 `files`、`nodes`、`edges`、`semantics` 和 FTS5 `search`，与原有图 JSON 共存。声明保存 UTF-8 解析输入的精确字节区间和 SHA-256；包含签名、装饰器与函数体，避免默认参数变化漏检。原文件指纹另存 `files.sha256`，适用于 BOM/UTF-16 的磁盘对账。时间字段在骨架表中采用内容版本键，避免墙钟时间污染确定性数据。
+SQLite WAL 中的 `files`、`nodes`、`sites`、`edges`、`semantics` 和 FTS5 `search` 与原有图 JSON 共存。files.document 只保存元数据和语法/契约指纹；nodes.document 保存区间、哈希和声明元数据，不保存 source_text。源码切片在领取/提交校验时从磁盘读取。声明保存 UTF-8 解析输入的精确字节区间和 SHA-256；包含签名、装饰器与函数体，避免默认参数变化漏检。原文件指纹另存 `files.sha256`，适用于 BOM/UTF-16 的磁盘对账。时间字段在骨架表中采用内容版本键，避免墙钟时间污染确定性数据。
 
 同一快照的核心四表（files/nodes/edges/search）的规范化有序内容可逐字节比较；SQLite 文件本身及预算、租约、历史记录不承诺字节相同。精确重命名沿用历史符号身份，因此从更名后的目录重新新建工程与保留更名前历史的工程，ID 可以不同。
 
-调用解析采用词法范围、同文件限定名、全项目唯一名称候选。多候选保留 ambiguous，无候选保留 name 占位与 unresolved。`resolved_local` 是语法名称匹配，不是类型检查证明。对象属性、动态分派、宏和跨文件别名可能保持未解析；import 原文保留为 unresolved 边。未安装解析器、二进制、超过现有 2 MiB 上限的源码会明确记录 unavailable；语法恢复标 partial。
+调用解析采用词法范围、同文件限定名、全项目唯一名称候选。多候选保留 ambiguous，无候选保留 name 占位与 unresolved。`resolved_local` 是语法名称匹配，不是类型检查证明。对象属性、动态分派、宏和跨文件别名可能保持未解析；import 原文保留为 unresolved 边。edges 主键包含 site_line，同一源节点在同一行多次调用相同目标会合并为一条边；入度统计反映合并后的边数。未安装解析器、二进制、超过现有 2 MiB 上限的源码会明确记录 unavailable；语法恢复标 partial。
 
-原生解析继续复用独立进程及单文件 15 秒超时，并发调度最多四个文件；Python AST 复用标准库。缓存同样提供给旧画布及阅读包，但语义完成状态不会被静态解析改变。
+原生解析继续复用独立进程及单文件 15 秒超时，并发调度最多四个文件；Python AST 复用标准库。旧画布、结构索引和阅读包从关系表临时还原兼容结构，默认不再自动写 structure_cache。`--legacy-cache` 或 MCP `legacy_cache=true` 可以启用该兼容缓存；用户显式运行旧 index 构建时仍可生成按需缓存。旧图历史需要的 source_texts 独立压缩保存，读取接口兼容原来的明文记录。静态解析不改变语义完成状态。
 
 ## 增量与失效
 
-文件哈希和解析器版本是对账基准，commit_id 记录当前 HEAD（非 Git 目录为 null）。采用全树哈希核对而非仅依赖提交差异，覆盖未提交、未跟踪和被 Git 忽略但仍纳入清单的源码。该策略需要 O(文件内容) 的扫描；只有变化文件进入解析器。名字解析和 FTS 在变更同步中重新核对全项目，尚未实现编译器增量索引或子树复用。
+文件哈希和解析器版本是对账基准，commit_id 记录当前 HEAD（非 Git 目录为 null）。采用全树哈希核对而非仅依赖提交差异，覆盖未提交、未跟踪和被 Git 忽略但仍纳入清单的源码。该策略需要 O(文件内容) 的扫描；只有变化文件进入解析器。调用重算范围为变更文件的调用点，以及目标名字命中增删/改名候选的其他调用点；同一边键的调用点成组处理。名字与词法范围索引一次加载，循环内不逐调用点查询节点。FTS 仅更新本次结构/语义变化涉及的节点；没有变化的同步不修复人为损坏的 FTS，修复请显式运行 reindex。仍未实现编译器增量索引或子树复用。
 
 - 未改动的声明保持原语义和任务。
 - 实现变化：对应节点的摘要 stale，排队重读。
@@ -56,10 +57,14 @@ SQLite WAL 中新增 `files`、`nodes`、`edges`、`semantics` 和 FTS5 `search`
 }
 ```
 
-预算在领取时按源码长度和输出预留估算；宿主必须把实际使用量限制在任务预留内并准确报告，服务端拒绝超额声明，不能监控外部模型自身的计费。成功提交退回未用预留；超时不退回，因为模型可能已经消费。租约可被重新领取，旧租约拒绝提交。整批事务提交，hash、磁盘指纹、租约、证据、预算任一失败都不写入。重复 batch_id 与相同内容幂等，不同内容拒绝。
+claim 在 WAL 只读快照中读取磁盘和校验哈希，进入写事务后复验同步版本、任务 generation/租约状态和余额，只在确认一致后分配租约；遇到竞争重新读取。预算在领取时按源码长度和输出预留估算；宿主必须把实际使用量限制在任务预留内并准确报告，服务端拒绝超额声明，不能监控外部模型自身的计费。成功提交退回未用预留；超时不退回，因为模型可能已经消费。租约可被重新领取，旧租约拒绝提交。整批事务提交，hash、磁盘指纹、租约、证据、预算任一失败都不写入。重复 batch_id 与相同内容幂等，不同内容拒绝。
 
 为保持旧协议兼容，节点语义任务使用关系表 `semantic_tasks` 与 `semantic_receipts`，沿用 claim/lease/batch 的约定；不把新节点硬塞入旧整图任务的 entity/scope 校验。原来的 next/prepare/commit 继续负责完整蓝图阅读、数据流和证据图。两类完成状态分别显示；节点摘要不冒充全仓库语义审阅完成。骨架 sync 不自动修改旧图快照；原有完整审阅流程仍使用 update 的预览/应用。
+
+同步实现拆为 reconcile（快照与哈希对账）、rebind（身份保持与解析差异）、invalidate（语义失效与一跳传播）、enqueue（任务与 FTS 定向更新）四个可单测阶段；持久化变化仍由单事务保护。
 
 ## 验收
 
 可复现命令与实测结果见 [SKELETON_ACCEPTANCE.md](SKELETON_ACCEPTANCE.md)。设计来源见 [SKELETON_PLAN.md](SKELETON_PLAN.md)。百万行目标尚待独立规模测试。
+
+规模路径改造的逐步提交和回归证据见 [SCALE_PROGRESS.md](SCALE_PROGRESS.md)。移除重复正文不代表完整数据库已满足源码体积 1.2 倍门禁；该口径包括旧图、压缩源码档案、关系表、索引等，需阶段 B 单独实测。

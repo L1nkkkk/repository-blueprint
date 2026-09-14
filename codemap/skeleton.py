@@ -1,22 +1,16 @@
 """Durable syntax facts and bounded read-only queries; no model invocation."""
 import ast
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from fnmatch import fnmatchcase
 from hashlib import sha256
 import json
 import sqlite3
-import subprocess
-from pathlib import Path
 import textwrap
 
 from .core import canonical, require
 from .resolution import SITE_SCHEMA, save_sites, resolve as _resolve
-from .repository import scan_repository, source_bytes, decode_text
-from .syntax import backend
 from .parser_runner import parse
-from .change_analysis import cosmetic_signature, exact_renames
+from .change_analysis import cosmetic_signature
+from .sync_pipeline import reconcile, rebind, invalidate, enqueue, sync
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS skeleton_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -43,6 +37,7 @@ CREATE TABLE IF NOT EXISTS structure_keys (key TEXT PRIMARY KEY, file_id TEXT NO
 CREATE TABLE IF NOT EXISTS semantic_tasks (node_id TEXT PRIMARY KEY REFERENCES nodes(id), body_sha TEXT NOT NULL,
  state TEXT NOT NULL, priority INTEGER NOT NULL, estimated_tokens INTEGER NOT NULL,
  lease_id TEXT, worker TEXT, expires_at REAL, generation INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS idx_semantic_queue ON semantic_tasks(state,priority DESC,node_id);
 CREATE TABLE IF NOT EXISTS semantic_receipts (batch_id TEXT PRIMARY KEY, payload TEXT NOT NULL);
 '''
 
@@ -82,6 +77,15 @@ def initialize(store):
             db.execute('INSERT OR IGNORE INTO search_rows(rowid,node_id) SELECT rowid,node_id FROM search')
             _save_meta(db, 'search_rows_version', 1)
         _save_meta(db,'storage_version',3)
+        if 'degree' not in {r['name'] for r in db.execute('PRAGMA table_info(nodes)')}:
+            db.execute('ALTER TABLE nodes ADD COLUMN degree INTEGER NOT NULL DEFAULT 0')
+            db.execute("UPDATE nodes SET degree=(SELECT count(*) FROM edges WHERE dst_id=nodes.id AND kind='call')")
+        db.executescript('''CREATE INDEX IF NOT EXISTS idx_nodes_degree ON nodes(degree DESC,file_id,start_line,id);
+            CREATE INDEX IF NOT EXISTS idx_files_path ON files(path);
+            CREATE TRIGGER IF NOT EXISTS edge_degree_insert AFTER INSERT ON edges WHEN NEW.kind='call' BEGIN
+                UPDATE nodes SET degree=degree+1 WHERE id=NEW.dst_id; END;
+            CREATE TRIGGER IF NOT EXISTS edge_degree_delete AFTER DELETE ON edges WHEN OLD.kind='call' BEGIN
+                UPDATE nodes SET degree=degree-1 WHERE id=OLD.dst_id; END;''')
         if not _meta(db, 'sites_version', 0):
             for row in db.execute('SELECT id,document FROM files').fetchall():
                 save_sites(db,row['id'],json.loads(row['document'])['sites'])
@@ -198,203 +202,6 @@ def _parse_item(item):
     return result
 
 
-def sync(store, *, budget=0, langs=None, include=None, workers=4, legacy_cache=None):
-    require(type(budget) is int and budget >= 0, 'budget must be a nonnegative integer')
-    require(type(workers) is int and 1 <= workers <= 16, 'workers must be 1..16')
-    initialize(store)
-    graph = store.read()
-    root = Path(graph['project']['source_root'])
-    fresh = scan_repository(root, excludes=graph['inventory']['exclusion_patterns'])
-    require(not fresh['inventory']['gaps'], 'Resolve inventory gaps before skeleton sync')
-    with connection(store) as db:
-        old = {r['path']: dict(r) for r in db.execute('SELECT * FROM files')}
-        old_documents = file_documents(db,old.values())
-        previous_version = _meta(db, 'version', 0)
-        config = _meta(db, 'config', {'langs': None, 'include': None, 'legacy_cache':False})
-    config = {'langs': langs if langs is not None else config['langs'], 'include': include if include is not None else config['include'],
-              'legacy_cache':legacy_cache if legacy_cache is not None else config.get('legacy_cache',False)}
-    sources = {s['path']: s for s in fresh['sources'] if s['included'] and s['language']
-               and (not config['langs'] or s['language'] in config['langs'])
-               and (not config['include'] or any(fnmatchcase(s['path'], p) for p in config['include']))}
-    try:
-        commit = subprocess.run(['git', '-C', str(root), 'rev-parse', 'HEAD'], capture_output=True, text=True,
-                                timeout=10, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0)).stdout.strip() or None
-    except (OSError,subprocess.TimeoutExpired):
-        commit = None
-    # Hash reconciliation also covers dirty and untracked files, unlike HEAD-only diff.
-    rename_before = {p: json.loads(r['document'])['source'] for p, r in old.items()}
-    renames = exact_renames(rename_before, sources)
-    renamed = {r['to']: r['from'] for r in renames}
-    items, retained, unavailable = [], {}, {}
-    file_ids, occupied = {}, {r['id'] for r in old.values()}
-    for path, s in sorted(sources.items()):
-        prior = old.get(path) or old.get(renamed.get(path))
-        file_id = prior['id'] if prior else s['id']
-        if not prior and file_id in occupied:
-            # A relocated file can still own the ID originally derived from this path.
-            salt = 0
-            while file_id in occupied:
-                file_id = 'source:' + sha256(canonical([s['id'],s['sha256'],salt]).encode()).hexdigest()[:24]
-                salt += 1
-        file_ids[path] = file_id
-        occupied.add(file_id)
-        engine = backend(s['language'], path)['id']
-        if prior and prior['sha256'] == s['sha256'] and prior['parser_id'] == engine and prior['state'] != 'unavailable':
-            row = old_documents[prior['id']]
-            retained[path] = row
-        elif not s.get('encoding'):
-            unavailable[path] = {'source_id':s['id'],'path':path,'sha256':s['sha256'],'language':s['language'],
-                                 'parser_id':engine,'state':'unavailable','symbols':[],'sites':[],
-                                 'diagnostics':[{'message':'Source is binary, oversized or has unsupported encoding','line':None}],
-                                 'diagnostic_count':1}
-        else:
-            _, raw = source_bytes(fresh, root, s['id'])
-            items.append((dict(s,id=file_id), decode_text(raw)[0]))
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        parsed = list(pool.map(_parse_item, items))
-    results = {r['path']: r for r in parsed} | retained | unavailable
-    if not parsed and not unavailable and set(retained)==set(old) and not renames and not legacy_cache:
-        with connection(store,write=True) as db:
-            require(_meta(db,'version',0)==previous_version,'Concurrent skeleton sync; retry')
-            db.execute('UPDATE files SET commit_id=?',(commit,))
-            _save_meta(db,'budget_remaining',budget)
-            _save_meta(db,'config',config)
-            _save_meta(db,'version',previous_version+1)
-            counts={t:db.execute('SELECT count(*) FROM '+t).fetchone()[0] for t in ('files','nodes','edges','semantic_tasks')}
-        return {**counts,'parsed_files':0,'cache_hits':len(retained),'unavailable_files':0,
-                'changed':[],'deleted':[],'suspect':[],'renames':[],'budget_remaining':budget,'llm_tokens':0}
-    changed, suspect, deleted = set(), set(), set()
-    with connection(store, write=True) as db:
-        require(_meta(db, 'version', 0) == previous_version, 'Concurrent skeleton sync; retry')
-        old_nodes = {r['id']:dict(json.loads(r['document']),file_id=r['file_id']) for r in db.execute('SELECT id,file_id,document FROM nodes')}
-        old_edges = [dict(r) for r in db.execute("SELECT * FROM edges WHERE kind='call'")]
-        new_nodes, contracts, fts_changed, affected_files = {}, set(), set(), set()
-        for path, row in sorted(results.items()):
-            s = sources[path]
-            prior = old.get(path) or old.get(renamed.get(path))
-            file_id = file_ids[path]
-            # Preserve moved or cosmetic-equivalent declarations using a unique verified match.
-            if prior and path not in retained:
-                idmap = {}
-                previous = old_documents[prior['id']]
-                lookup = defaultdict(list)
-                for n in previous['symbols']:
-                    lookup[(n['kind'], n['qualified_name'], n['signature'])].append(n['id'])
-                equivalent = defaultdict(list)
-                for n in previous['symbols']:
-                    equivalent[(n['kind'],n['qualified_name'],n.get('semantic_sha'))].append(n['id'])
-                for n in row['symbols']:
-                    matches = lookup[(n['kind'], n['qualified_name'], n['signature'])]
-                    if matches:
-                        idmap[n['id']] = matches.pop(0)
-                    else:
-                        exact = equivalent[(n['kind'],n['qualified_name'],n.get('semantic_sha'))]
-                        if len(exact)==1:
-                            idmap[n['id']] = exact[0]
-                for n in row['symbols']:
-                    n['id'] = idmap.get(n['id'], n['id'])
-                    n['parent_id'] = idmap.get(n['parent_id'], n['parent_id'])
-                for site in row['sites']:
-                    site['enclosing_symbol_id'] = idmap.get(site['enclosing_symbol_id'], site['enclosing_symbol_id'])
-            row.update(source_id=file_id, path=path, source=s)
-            if path not in retained or path in renamed:
-                affected_files.add(file_id)
-            classification = None
-            if prior and path not in retained and path not in unavailable:
-                before = old_documents[prior['id']]
-                classification = ('cosmetic' if before.get('syntax_sha')==row.get('syntax_sha') and row.get('syntax_sha')
-                                  else 'contract' if before.get('contract_sha')!=row.get('contract_sha') else 'implementation')
-                before_imports = [x['text'] for x in before['sites'] if x['kind']=='import']
-                after_imports = [x['text'] for x in row['sites'] if x['kind']=='import']
-                if before_imports != after_imports and classification != 'cosmetic':
-                    contracts.update(n['id'] for n in before['symbols'])
-                    changed.update(n['id'] for n in row['symbols'])
-            stamp = s['sha256'] + ':' + row['parser_id']
-            db.execute('''INSERT INTO files VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
-             path=excluded.path,sha256=excluded.sha256,language=excluded.language,parser_id=excluded.parser_id,
-             state=excluded.state,commit_id=excluded.commit_id,updated_at=excluded.updated_at,document=excluded.document''',
-             (file_id,path,s['sha256'],s['language'],row['parser_id'],row['state'],commit,stamp,canonical({k:v for k,v in row.items() if k not in {'symbols','sites','text'}})))
-            from .structure import cache_key
-            db.execute('INSERT OR REPLACE INTO structure_keys VALUES (?,?)',(cache_key(s),file_id))
-            if file_id in affected_files:
-                save_sites(db,file_id,row['sites'])
-            for n in row['symbols']:
-                n = dict(n, file_id=file_id)
-                new_nodes[n['id']] = n
-                prev = old_nodes.get(n['id'])
-                if prev != n:
-                    fts_changed.add(n['id'])
-                if prev and prev['body_sha'] != n['body_sha']:
-                    if prev.get('semantic_sha') == n.get('semantic_sha') or classification == 'cosmetic':
-                        _rebind_cosmetic(db, prev, n)
-                    else:
-                        changed.add(n['id'])
-                        if classification == 'contract':
-                            contracts.add(n['id'])
-                elif not prev:
-                    changed.add(n['id'])
-                elif prev['start_line'] != n['start_line']:
-                    _rebind_cosmetic(db, prev, n)
-                db.execute('''INSERT INTO nodes VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
-                 file_id=excluded.file_id,kind=excluded.kind,name=excluded.name,qualified_name=excluded.qualified_name,
-                 parent_id=excluded.parent_id,start_line=excluded.start_line,end_line=excluded.end_line,
-                 signature=excluded.signature,body_sha=excluded.body_sha,updated_at=excluded.updated_at,document=excluded.document''',
-                 (n['id'],file_id,n['kind'],n['name'],n['qualified_name'],n['parent_id'],n['start_line'],n['end_line'],n['signature'],n['body_sha'],n['body_sha'],canonical({k:v for k,v in n.items() if k!='file_id'})))
-        deleted = old_nodes.keys() - new_nodes.keys()
-        contracts.update(deleted)
-        suspect = {e['src_id'] for e in old_edges if e['dst_id'] in contracts} & new_nodes.keys() - changed
-        for id in changed:
-            db.execute("UPDATE semantics SET status='stale' WHERE node_id=?", (id,))
-            db.execute('DELETE FROM semantic_tasks WHERE node_id=?', (id,))
-        for id in suspect:
-            db.execute("UPDATE semantics SET status='suspect' WHERE node_id=? AND status='current'", (id,))
-            db.execute('DELETE FROM semantic_tasks WHERE node_id=?', (id,))
-        for id in deleted:
-            db.execute('DELETE FROM semantics WHERE node_id=?', (id,))
-            db.execute('DELETE FROM semantic_tasks WHERE node_id=?', (id,))
-            db.execute('DELETE FROM nodes WHERE id=?', (id,))
-        active = {n['file_id'] for n in new_nodes.values()} | {r['source_id'] for r in results.values()}
-        removed_files = set()
-        for r in db.execute('SELECT id FROM files').fetchall():
-            if r['id'] not in active:
-                removed_files.add(r['id'])
-                db.execute('DELETE FROM files WHERE id=?', (r['id'],))
-        before_candidates = {(n['id'],n['name'],n['qualified_name'],n['file_id']) for n in old_nodes.values()}
-        after_candidates = {(n['id'],n['name'],n['qualified_name'],n['file_id']) for n in new_nodes.values()}
-        affected_names = {name for n in before_candidates ^ after_candidates for name in n[1:3]}
-        resolution = _resolve(db, file_ids=affected_files, names=affected_names, removed_sources=deleted | removed_files)
-        before_targets, after_targets = defaultdict(set), defaultdict(set)
-        for e in old_edges:
-            before_targets[e['src_id']].add((e['dst_id'],e['confidence']))
-        for e in db.execute("SELECT * FROM edges WHERE kind='call'"):
-            after_targets[e['src_id']].add((e['dst_id'],e['confidence']))
-        resolution_changed = {id for id in old_nodes.keys() & new_nodes.keys() - changed
-                              if before_targets[id] != after_targets[id]}
-        for id in resolution_changed - suspect:
-            db.execute("UPDATE semantics SET status='suspect' WHERE node_id=? AND status='current'", (id,))
-            db.execute('DELETE FROM semantic_tasks WHERE node_id=?', (id,))
-        suspect.update(resolution_changed)
-        for n in new_nodes.values():
-            sem = _semantic(db,n)
-            if sem and sem['status'] == 'current':
-                continue
-            degree = db.execute("SELECT count(*) FROM edges WHERE dst_id=? AND kind='call'", (n['id'],)).fetchone()[0]
-            estimate = max(128, (n['end_byte'] - n['start_byte'] + 2)//3 + 512)
-            db.execute('INSERT OR IGNORE INTO semantic_tasks(node_id,body_sha,state,priority,estimated_tokens) VALUES (?,?,?,?,?)',
-                       (n['id'],n['body_sha'],'queued',degree*10 - (1 if sem and sem['status']=='suspect' else 0),estimate))
-        update_search(db, fts_changed | changed | suspect | deleted)
-        _save_meta(db,'config',config)
-        _save_meta(db,'root',str(root))
-        _save_meta(db,'budget_remaining',budget)
-        _save_meta(db,'version',previous_version+1)
-        counts = {t: db.execute('SELECT count(*) FROM '+t).fetchone()[0] for t in ('files','nodes','edges','semantic_tasks')}
-    from .structure import cache_key
-    for path, row in results.items():
-        if config['legacy_cache'] and row['source_id'] == sources[path]['id']:
-            key = cache_key(sources[path])
-            store.save_structure(key, dict(row, index_id=key))
-    return {**counts,**resolution,'unavailable_files':len(unavailable),'parsed_files':len(parsed),'cache_hits':len(retained),'changed':sorted(changed),
-            'deleted':sorted(deleted),'suspect':sorted(suspect),'renames':renames,'budget_remaining':budget,'llm_tokens':0}
 
 
 def _record(db, row):
@@ -466,19 +273,28 @@ def search(store, query, limit=30):
         return {'symbols':[_record(db,r) for r in rows[:limit]],'truncated':len(rows)>limit}
 
 
+def repo_map_query(path):
+    prefix = path.replace('\\','/').removeprefix('./').strip('/')
+    if prefix:
+        prefix += '/'
+        upper = prefix[:-1] + chr(ord(prefix[-1])+1)
+        return ('''SELECT n.signature,n.start_line,n.degree,f.path FROM files f INDEXED BY idx_files_path
+                CROSS JOIN nodes n INDEXED BY idx_nodes_file ON n.file_id=f.id
+                WHERE f.path>=? AND f.path<? ORDER BY n.degree DESC,f.path,n.start_line,n.id''', (prefix,upper))
+    return ('''SELECT n.signature,n.start_line,n.degree,f.path FROM nodes n
+            JOIN files f ON f.id=n.file_id ORDER BY n.degree DESC,f.path,n.start_line,n.id''', ())
+
+
 def repo_map(store, path='', budget_tokens=2000):
     require(type(budget_tokens) is int and 0 <= budget_tokens <= 32000, 'budget_tokens must be 0..32000')
-    lines, used = [], 0
+    lines, used, truncated = [],0,False
     with connection(store) as db:
-        rows = db.execute('''SELECT n.*,f.path,(SELECT count(*) FROM edges e WHERE e.dst_id=n.id AND e.kind='call') degree
-         FROM nodes n JOIN files f ON f.id=n.file_id WHERE substr(f.path,1,?)=? ORDER BY degree DESC,f.path,n.start_line,n.id''',(len(path),path))
-        truncated = False
-        for r in rows:
+        sql,params = repo_map_query(path)
+        for r in db.execute(sql,params):
             line = f"{r['path']}:{r['start_line']}  {r['signature']}"
-            # UTF-8 byte count is a conservative upper bound, independent of tokenizer.
             cost = len((line+'\n').encode('utf-8'))
             if used+cost > budget_tokens:
-                truncated=True
+                truncated = True
                 continue
             lines.append(line)
             used += cost
@@ -497,6 +313,8 @@ def doctor(store):
         if dangling: errors.append(f'{dangling} dangling edges')
         bad_tasks = db.execute('SELECT count(*) FROM semantic_tasks t JOIN nodes n ON t.node_id=n.id WHERE t.body_sha!=n.body_sha').fetchone()[0]
         if bad_tasks: errors.append(f'{bad_tasks} mismatched task hashes')
+        bad_degree = db.execute("SELECT count(*) FROM nodes WHERE degree!=(SELECT count(*) FROM edges WHERE dst_id=nodes.id AND kind='call')").fetchone()[0]
+        if bad_degree: errors.append(f'{bad_degree} mismatched materialized degrees')
         expected = [(r['id'],r['qualified_name'],r['signature'],(_semantic(db,r) or {}).get('summary','')) for r in db.execute('SELECT * FROM nodes ORDER BY id')]
         actual = [tuple(r) for r in db.execute('SELECT * FROM search ORDER BY node_id')]
         if expected != actual: errors.append('FTS index differs from symbols/semantics')

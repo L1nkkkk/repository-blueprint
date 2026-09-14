@@ -54,29 +54,54 @@ def claim(store, worker, n=1, lease_seconds=1800, now=None):
     require(isinstance(worker,str) and worker.strip(),'worker is required')
     require(type(n) is int and 1<=n<=20,'n must be 1..20')
     require(type(lease_seconds) is int and 1<=lease_seconds<=3600,'lease_seconds must be 1..3600')
-    now = time.time() if now is None else now
-    with connection(store,write=True) as db:
-        # Reservations are not refunded: expired executors may already have spent tokens.
-        db.execute("UPDATE semantic_tasks SET state='queued',lease_id=NULL,worker=NULL,expires_at=NULL WHERE state='running' AND expires_at<=?",(now,))
-        remaining = _meta(db,'budget_remaining',0)
-        tasks=[]
-        candidates = db.execute("SELECT * FROM semantic_tasks WHERE state='queued' ORDER BY priority DESC,node_id").fetchall()
-        for t in candidates:
-            if len(tasks)>=n: break
-            if t['estimated_tokens']>remaining: continue
-            node = db.execute('SELECT * FROM nodes WHERE id=?',(t['node_id'],)).fetchone()
-            path,code = _disk_node(db,node)
-            lease = str(uuid4())
-            db.execute("UPDATE semantic_tasks SET state='running',lease_id=?,worker=?,expires_at=?,generation=generation+1 WHERE node_id=?",(lease,worker,now+lease_seconds,t['node_id']))
-            remaining-=t['estimated_tokens']
-            context=[dict(r) for r in db.execute("SELECT * FROM edges WHERE kind='call' AND (src_id=? OR dst_id=?) ORDER BY src_id,dst_id,site_line LIMIT 100",(t['node_id'],t['node_id']))]
-            tasks.append({'node_id':t['node_id'],'body_sha':t['body_sha'],'lease_id':lease,'worker':worker,
-                          'expires_at':now+lease_seconds,'estimated_tokens':t['estimated_tokens'],
-                          'path':path,'start_line':node['start_line'],'end_line':node['end_line'],
-                          'signature':node['signature'],'source':code,'calls':context,
-                          'output_fields':['summary','detail','evidence','model','used_tokens']})
-        _save_meta(db,'budget_remaining',remaining)
-        return {'tasks':tasks,'budget_remaining':remaining,'state':'claimed' if tasks else 'budget_exhausted_or_idle'}
+    for attempt in range(8):
+        instant = time.time() if now is None else now
+        prepared = []
+        # WAL read snapshot: file reads and hashes cannot hold the writer reservation.
+        with connection(store) as db:
+            db.execute('BEGIN')
+            version = _meta(db,'version',0)
+            remaining = _meta(db,'budget_remaining',0)
+            candidates = db.execute('''SELECT * FROM semantic_tasks WHERE
+                (state='queued' OR (state='running' AND expires_at<=?)) AND estimated_tokens<=?
+                ORDER BY priority DESC,node_id''',(instant,remaining))
+            for row in candidates:
+                t = dict(row)
+                if len(prepared)>=n: break
+                if t['estimated_tokens']>remaining: continue
+                node = db.execute('SELECT * FROM nodes WHERE id=?',(t['node_id'],)).fetchone()
+                path,code = _disk_node(db,node)
+                context = [dict(r) for r in db.execute("SELECT * FROM edges WHERE kind='call' AND (src_id=? OR dst_id=?) ORDER BY src_id,dst_id,site_line LIMIT 100",(t['node_id'],t['node_id']))]
+                prepared.append((t,dict(node),path,code,context))
+                remaining -= t['estimated_tokens']
+        with connection(store,write=True) as db:
+            if _meta(db,'version',0)!=version:
+                continue
+            remaining = _meta(db,'budget_remaining',0)
+            if sum(t['estimated_tokens'] for t,*_ in prepared)>remaining:
+                continue
+            fields = ('state','lease_id','worker','expires_at','generation','body_sha','estimated_tokens')
+            current = {t['node_id']:db.execute('SELECT * FROM semantic_tasks WHERE node_id=?',(t['node_id'],)).fetchone()
+                       for t,*_ in prepared}
+            if any(current[t['node_id']] is None or any(current[t['node_id']][key]!=t[key] for key in fields)
+                   for t,*_ in prepared):
+                continue
+            instant = time.time() if now is None else now
+            # Expired reservations are not refunded: a previous executor may have spent them.
+            db.execute("UPDATE semantic_tasks SET state='queued',lease_id=NULL,worker=NULL,expires_at=NULL WHERE state='running' AND expires_at<=?",(instant,))
+            tasks = []
+            for t,node,path,code,context in prepared:
+                lease = str(uuid4())
+                db.execute("UPDATE semantic_tasks SET state='running',lease_id=?,worker=?,expires_at=?,generation=generation+1 WHERE node_id=?",(lease,worker,instant+lease_seconds,t['node_id']))
+                remaining -= t['estimated_tokens']
+                tasks.append({'node_id':t['node_id'],'body_sha':t['body_sha'],'lease_id':lease,'worker':worker,
+                              'expires_at':instant+lease_seconds,'estimated_tokens':t['estimated_tokens'],
+                              'path':path,'start_line':node['start_line'],'end_line':node['end_line'],
+                              'signature':node['signature'],'source':code,'calls':context,
+                              'output_fields':['summary','detail','evidence','model','used_tokens']})
+            _save_meta(db,'budget_remaining',remaining)
+            return {'tasks':tasks,'budget_remaining':remaining,'state':'claimed' if tasks else 'budget_exhausted_or_idle'}
+    require(False,'Concurrent semantic task changes; retry claim')
 
 
 def submit(store, batch, now=None):

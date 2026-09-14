@@ -1,0 +1,64 @@
+{
+  "scope": "Stage A regression only; not the independent mypy 100K benchmark",
+  "platform": "Windows",
+  "python": "3.12.14",
+  "node": "24.14.1",
+  "runs": [
+    {
+      "phase": "a1",
+      "suite": "python",
+      "output": "a1-python.txt",
+      "completed_at_utc": "2026-09-14T07:48:15.895832+00:00",
+      "command": "python -m unittest discover -s tests -p \"test_*.py\""
+    },
+    {
+      "phase": "a1",
+      "suite": "js",
+      "output": "a1-js.txt",
+      "completed_at_utc": "2026-09-14T07:47:47.178455+00:00",
+      "command": "node --test tests/*.test.cjs"
+    },
+    {
+      "phase": "a2",
+      "suite": "python",
+      "output": "a2-python.txt",
+      "completed_at_utc": "2026-09-14T07:51:55.896386+00:00",
+      "command": "python -m unittest discover -s tests -p \"test_*.py\""
+    },
+    {
+      "phase": "a2",
+      "suite": "js",
+      "output": "a2-js.txt",
+      "completed_at_utc": "2026-09-14T07:51:02.711874+00:00",
+      "command": "node --test tests/*.test.cjs"
+    },
+    {
+      "phase": "a3",
+      "suite": "python",
+      "output": "a3-python.txt",
+      "completed_at_utc": "2026-09-14T07:57:24.786337+00:00",
+      "command": "python -m unittest discover -s tests -p \"test_*.py\""
+    },
+    {
+      "phase": "a3",
+      "suite": "js",
+      "output": "a3-js.txt",
+      "completed_at_utc": "2026-09-14T07:55:45.859426+00:00",
+      "command": "node --test tests/*.test.cjs"
+    },
+    {
+      "phase": "a4",
+      "suite": "python",
+      "output": "a4-python.txt",
+      "completed_at_utc": "2026-09-14T08:08:25.425378+00:00",
+      "command": "python -m unittest discover -s tests -p \"test_*.py\""
+    },
+    {
+      "phase": "a4",
+      "suite": "js",
+      "output": "a4-js.txt",
+      "completed_at_utc": "2026-09-14T08:05:14.307471+00:00",
+      "command": "node --test tests/*.test.cjs"
+    }
+  ]
+}

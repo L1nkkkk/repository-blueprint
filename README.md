@@ -1,5 +1,8 @@
 # Repository Blueprint · 代码蓝图
 
+规模路径阶段 A 已加入定向 FTS、调用边子集重算和精简存储。旧骨架工程须用新输出目录重建，详见 [使用说明](SKELETON.md) 与 [阶段记录](SCALE_PROGRESS.md)。十万行 mypy 基准待独立任务验收。
+
+
 新增持久骨架层：`init` 一次生成全部可解析符号，零模型调用；MCP 提供符号、调用链、全文搜索和压缩仓库地图。`sync` 按内容哈希更新并标记 stale/suspect，任意宿主可以在预算内领取节点语义任务。详见 [使用说明](SKELETON.md)、[验收记录](SKELETON_ACCEPTANCE.md) 和 [原始改造方案](SKELETON_PLAN.md)。
 
 

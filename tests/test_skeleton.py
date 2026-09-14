@@ -364,6 +364,88 @@ class SkeletonTests(unittest.TestCase):
             self.assertEqual(sk._meta(db,'storage_version'),2)
             self.assertEqual(db.execute('SELECT count(*) FROM nodes').fetchone()[0],3)
 
+
+    def test_claim_disk_reads_allow_writers_and_retry_changed_generation(self):
+        original=ex._disk_node
+        reads=[]
+        def reading(db,node):
+            reads.append(node['id'])
+            # This second writer would time out if _disk_node held BEGIN IMMEDIATE.
+            with sk.connection(self.store,write=True) as other:
+                sk._save_meta(other,'read_probe',len(reads))
+                if len(reads)==1:
+                    sk._save_meta(other,'version',sk._meta(other,'version')+1)
+            return original(db,node)
+        with patch.object(ex,'_disk_node',side_effect=reading):
+            claim=ex.claim(self.store,'outside-writer')
+        self.assertEqual(len(claim['tasks']),1)
+        self.assertEqual(len(reads),2)
+        with sk.connection(self.store) as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM semantic_tasks WHERE state='running'").fetchone()[0],1)
+
+    def test_pipeline_stages_are_independent_and_atomic(self):
+        self.review_all()
+        self.file.write_text(self.code.replace('x + 1','x + 9'),encoding='utf-8')
+        plan=sk.reconcile(self.store,budget=2000)
+        delta=sk.rebind(plan)
+        self.assertEqual(delta['changed'],{self.node('leaf')['id']})
+        self.assertEqual(self.node('leaf')['semantics']['status'],'current')
+        from codemap.sync_pipeline import _persist
+        with sk.connection(self.store,write=True) as db:
+            db.execute('SAVEPOINT inspect_stages')
+            direct,resolution=_persist(db,plan,delta)
+            suspect=sk.invalidate(db,delta,direct,resolution['resolution_changed'])
+            self.assertFalse(suspect)
+            sk.enqueue(db,delta,suspect,resolution['degree_changed'])
+            self.assertEqual(db.execute('SELECT status FROM semantics WHERE node_id=?',(self.node('leaf')['id'],)).fetchone()[0],'stale')
+            db.execute('ROLLBACK TO inspect_stages')
+        self.assertEqual(self.node('leaf')['semantics']['status'],'current')
+        sk.sync(self.store)
+        self.assertEqual(self.node('leaf')['semantics']['status'],'stale')
+
+    def test_materialized_degrees_indexed_directory_prefix_and_same_line_limit(self):
+        (self.root/'sub').mkdir()
+        (self.root/'submarine').mkdir()
+        (self.root/'sub'/'a.py').write_text('def other():\n leaf(); leaf()\n')
+        (self.root/'submarine'/'b.py').write_text('def unrelated():\n return 1\n')
+        sk.sync(self.store)
+        leaf=self.node('leaf')
+        self.assertEqual(leaf['degree'],2) # caller + one collapsed same-line edge
+        self.assertEqual(len(sk.calls(self.store,'other',direction='callees')['edges']),1)
+        self.assertIn('sub/a.py',sk.repo_map(self.store,path='sub')['text'])
+        self.assertNotIn('submarine',sk.repo_map(self.store,path='sub')['text'])
+        with sk.connection(self.store) as db:
+            sql,params=sk.repo_map_query('sub')
+            plan=' '.join(r[3] for r in db.execute('EXPLAIN QUERY PLAN '+sql,params))
+            self.assertIn('SEARCH f USING INDEX idx_files_path',plan)
+            self.assertNotIn('CORRELATED',plan)
+        (self.root/'sub'/'a.py').unlink()
+        sk.sync(self.store)
+        self.assertEqual(self.node('leaf')['degree'],1)
+        self.assertTrue(sk.doctor(self.store)['ok'])
+
+
+    def test_sync_and_two_submissions_preserve_unrelated_results(self):
+        for name in ('one','two'):
+            (self.root/(name+'.py')).write_text(f'def {name}():\n return 1\n')
+        sk.sync(self.store,budget=100000)
+        tasks=ex.claim(self.store,'mixed',n=20)['tasks']
+        selected=[t for t in tasks if t['path'] in {'one.py','two.py'}]
+        self.assertEqual(len(selected),2)
+        self.file.write_text(self.code.replace('x + 1','x + 2'),encoding='utf-8')
+        def queries():
+            for _ in range(20):
+                sk.find_symbol(self.store,'leaf')
+                sk.search(self.store,'leaf')
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            jobs=[pool.submit(sk.sync,self.store),pool.submit(queries)]
+            jobs += [pool.submit(ex.submit,self.store,{'batch_id':'parallel-'+str(i),'results':[self.result(t)]})
+                     for i,t in enumerate(selected)]
+            for job in jobs:job.result(timeout=20)
+        self.assertEqual(self.node('one')['semantics']['status'],'current')
+        self.assertEqual(self.node('two')['semantics']['status'],'current')
+        self.assertTrue(sk.doctor(self.store)['ok'])
+
     def test_exact_utf8_spans(self):
         code='@decorator\ndef café(x="你"):\n    return x\n'
         source={'id':'source:test','path':'u.py','language':'python','sha256':sha256(code.encode()).hexdigest()}

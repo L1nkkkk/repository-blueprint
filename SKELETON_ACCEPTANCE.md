@@ -1,5 +1,8 @@
 # 骨架改造验收记录
 
+本页保留 aa113ad 版本的万行级实测数据。后续规模路径阶段 A 的实现与回归见 [SCALE_PROGRESS.md](SCALE_PROGRESS.md)；尚未进行独立 mypy 十万行基准，不能将本页旧数据视为新版本的十万行验收。
+
+
 验收日期：2026-09-14。环境：Windows，Python 3.12.14，Node.js 24.14.1，项目 requirements-parsers.txt 中锁定的 Tree-sitter 后端。基于 SKELETON_PLAN.md 的 M1–M4，验证工作区实际实现；性能数字为本机实测，不外推为所有仓库的保证。
 
 ## 结果
