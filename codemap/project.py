@@ -13,7 +13,7 @@ from .updates import scan_update, update_plan, impact
 from .change_analysis import snapshot_texts
 
 
-def initialize_project(root, output=None, *, excludes=(), budget=0, langs=None, include=None):
+def initialize_project(root, output=None, *, excludes=(), budget=0, langs=None, include=None, legacy_cache=False):
     root = Path(root).resolve(strict=True)
     output = Path(output).resolve() if output else root / '.codemap'
     require(output != root, 'project output cannot replace repository root')
@@ -27,7 +27,7 @@ def initialize_project(root, output=None, *, excludes=(), budget=0, langs=None, 
     store.initialize(graph)
     store.save_source_texts(snapshot_texts(graph))
     from .skeleton import sync
-    sync(store, budget=budget, langs=langs, include=include)
+    sync(store, budget=budget, langs=langs, include=include, legacy_cache=legacy_cache)
     return store
 
 

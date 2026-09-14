@@ -6,8 +6,17 @@ Stores one graph document per database; large-graph sharding is not implemented.
 from contextlib import contextmanager
 import json
 import sqlite3
+import zlib
 
 from .core import apply_batch, canonical, claim_task, recover_expired, renew_task, retry_task, require, validate_graph
+
+
+def encode_source(text):
+    return b'CMZ1' + zlib.compress(text.encode('utf-8'))
+
+
+def decode_source(value):
+    return zlib.decompress(value[4:]).decode('utf-8') if isinstance(value,bytes) and value.startswith(b'CMZ1') else value
 
 
 class GraphStore:
@@ -72,17 +81,33 @@ class GraphStore:
                 db.execute('INSERT INTO snapshot_history VALUES (?, ?, ?)',
                            (graph['project']['revision'], graph['project']['snapshot_id'], row[0]))
                 db.execute('UPDATE graph SET document=? WHERE id=1', (canonical(updated),))
-                db.executemany('INSERT OR IGNORE INTO source_texts VALUES (?, ?)', (new_texts or {}).items())
+                db.executemany('INSERT OR IGNORE INTO source_texts VALUES (?, ?)', ((key,encode_source(value)) for key,value in (new_texts or {}).items()))
             return updated
 
     def save_source_texts(self, texts):
         with self._connection() as db:
-            db.executemany('INSERT OR IGNORE INTO source_texts VALUES (?, ?)', texts.items())
+            db.executemany('INSERT OR IGNORE INTO source_texts VALUES (?, ?)', ((key,encode_source(value)) for key,value in texts.items()))
 
     def cached_structure(self, keys):
+        keys = list(keys)
         with self._connection() as db:
-            return {key: json.loads(row[0]) for key in keys
-                    if (row := db.execute('SELECT document FROM structure_cache WHERE id=?', (key,)).fetchone())}
+            result = {key: json.loads(row[0]) for key in keys
+                      if (row := db.execute('SELECT document FROM structure_cache WHERE id=?', (key,)).fetchone())}
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE name='structure_keys'").fetchone():
+                return result
+            from .skeleton import file_documents
+            db.row_factory = sqlite3.Row
+            missing = [key for key in keys if key not in result]
+            for offset in range(0,len(missing),400):
+                page = missing[offset:offset+400]
+                marks = ','.join('?' for _ in page)
+                rows = db.execute('SELECT f.*,k.key FROM structure_keys k JOIN files f ON f.id=k.file_id WHERE k.key IN ('+marks+')',page).fetchall()
+                documents = file_documents(db,rows)
+                for row in rows:
+                    document = documents[row['id']]
+                    document['source_id'] = document['source']['id']
+                    result[row['key']] = dict(document,index_id=row['key'])
+            return result
 
     def save_structure(self, key, document):
         # A derived cache never owns task leases, evidence or graph revisions.
@@ -91,7 +116,7 @@ class GraphStore:
 
     def source_texts(self, hashes):
         with self._connection() as db:
-            return {hash: row[0] for hash in set(hashes)
+            return {hash: decode_source(row[0]) for hash in set(hashes)
                     if (row := db.execute('SELECT content FROM source_texts WHERE sha256=?', (hash,)).fetchone())}
 
     def save_prepared(self, batch):

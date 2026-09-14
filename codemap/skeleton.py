@@ -1,4 +1,5 @@
 """Durable syntax facts and bounded read-only queries; no model invocation."""
+import ast
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -15,7 +16,7 @@ from .resolution import SITE_SCHEMA, save_sites, resolve as _resolve
 from .repository import scan_repository, source_bytes, decode_text
 from .syntax import backend
 from .parser_runner import parse
-from .change_analysis import cosmetic_signature, classify_change, exact_renames
+from .change_analysis import cosmetic_signature, exact_renames
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS skeleton_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS semantics (node_id TEXT NOT NULL REFERENCES nodes(id)
  PRIMARY KEY(node_id,created_at));
 CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(node_id UNINDEXED,qualified_name,signature,summary);
 CREATE TABLE IF NOT EXISTS search_rows (rowid INTEGER PRIMARY KEY, node_id TEXT NOT NULL UNIQUE);
+CREATE TABLE IF NOT EXISTS structure_keys (key TEXT PRIMARY KEY, file_id TEXT NOT NULL UNIQUE REFERENCES files(id) ON DELETE CASCADE);
 CREATE TABLE IF NOT EXISTS semantic_tasks (node_id TEXT PRIMARY KEY REFERENCES nodes(id), body_sha TEXT NOT NULL,
  state TEXT NOT NULL, priority INTEGER NOT NULL, estimated_tokens INTEGER NOT NULL,
  lease_id TEXT, worker TEXT, expires_at REAL, generation INTEGER NOT NULL DEFAULT 0);
@@ -70,12 +72,16 @@ def summary(store):
 
 def initialize(store):
     with connection(store) as db:
+        exists = db.execute("SELECT 1 FROM sqlite_master WHERE name='nodes'").fetchone()
+        if exists:
+            require(_meta(db,'storage_version',0)==3, 'Skeleton storage upgrade requires rebuild: run init REPO --output NEW_MAP. The existing project and semantics are preserved.')
         db.execute('PRAGMA journal_mode=WAL')
         db.executescript(SCHEMA + SITE_SCHEMA)
         # One-time rowid mapping for pre-scale databases; no FTS rebuild.
         if not _meta(db, 'search_rows_version', 0):
             db.execute('INSERT OR IGNORE INTO search_rows(rowid,node_id) SELECT rowid,node_id FROM search')
             _save_meta(db, 'search_rows_version', 1)
+        _save_meta(db,'storage_version',3)
         if not _meta(db, 'sites_version', 0):
             for row in db.execute('SELECT id,document FROM files').fetchall():
                 save_sites(db,row['id'],json.loads(row['document'])['sites'])
@@ -147,18 +153,52 @@ def _rebind_cosmetic(db, before, after):
                    (after['body_sha'],canonical(evidence),canonical(detail),before['id'],r['created_at']))
 
 
+def file_documents(db, files):
+    """Reconstruct the old syntax API from relations; no source text or duplicate cache."""
+    files = list(files)
+    documents = {r['id']:dict(json.loads(r['document']),symbols=[],sites=[]) for r in files}
+    ids = list(documents)
+    for offset in range(0,len(ids),400):
+        page = ids[offset:offset+400]
+        marks = ','.join('?' for _ in page)
+        for row in db.execute('SELECT file_id,document FROM nodes WHERE file_id IN ('+marks+') ORDER BY start_line,id',page):
+            documents[row['file_id']]['symbols'].append(json.loads(row['document']))
+        for row in db.execute('SELECT * FROM sites WHERE file_id IN ('+marks+') ORDER BY file_id,ordinal',page):
+            documents[row['file_id']]['sites'].append({'kind':row['kind'],'text':row['text'],
+                'text_truncated':bool(row['text_truncated']),'enclosing_symbol_id':row['src_id'] if row['src_id']!=row['file_id'] else None,
+                'start_line':row['site_line'],'end_line':row['end_line'],'resolution':'unresolved'})
+    # Preserve parser declaration order, including same-line fields and nested symbols.
+    for document in documents.values():
+        document['symbols'].sort(key=lambda n:n.get('ordinal',0))
+    return documents
+
+
 def _parse_item(item):
     source, text = item
     result = parse(source, text)
-    for n in result['symbols']:
-        snippet = text.encode('utf-8')[n['start_byte']:n['end_byte']].decode('utf-8')
+    raw = text.encode('utf-8')
+    normalized = cosmetic_signature(text, source['language'])
+    result['syntax_sha'] = sha256(canonical(normalized).encode()).hexdigest() if normalized is not None else source['sha256']
+    result['contract_sha'] = None
+    if source['language']=='python':
+        try:
+            tree = ast.parse(text,type_comments=True)
+            for node in ast.walk(tree):
+                if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)):
+                    node.body = [ast.Pass()]
+            result['contract_sha'] = sha256(ast.dump(tree,include_attributes=False).encode()).hexdigest()
+        except (SyntaxError,ValueError,RecursionError):
+            pass
+    result['line_count'] = len(text.splitlines())
+    for ordinal,n in enumerate(result['symbols']):
+        snippet = raw[n['start_byte']:n['end_byte']].decode('utf-8')
         normalized = cosmetic_signature(textwrap.dedent(snippet), source['language'])
         n.setdefault('semantic_sha', sha256(canonical(normalized).encode()).hexdigest() if normalized is not None else n['body_sha'])
-        n['source_text'] = snippet
+        n['ordinal'] = ordinal
     return result
 
 
-def sync(store, *, budget=0, langs=None, include=None, workers=4):
+def sync(store, *, budget=0, langs=None, include=None, workers=4, legacy_cache=None):
     require(type(budget) is int and budget >= 0, 'budget must be a nonnegative integer')
     require(type(workers) is int and 1 <= workers <= 16, 'workers must be 1..16')
     initialize(store)
@@ -168,9 +208,11 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
     require(not fresh['inventory']['gaps'], 'Resolve inventory gaps before skeleton sync')
     with connection(store) as db:
         old = {r['path']: dict(r) for r in db.execute('SELECT * FROM files')}
+        old_documents = file_documents(db,old.values())
         previous_version = _meta(db, 'version', 0)
-        config = _meta(db, 'config', {'langs': None, 'include': None})
-    config = {'langs': langs if langs is not None else config['langs'], 'include': include if include is not None else config['include']}
+        config = _meta(db, 'config', {'langs': None, 'include': None, 'legacy_cache':False})
+    config = {'langs': langs if langs is not None else config['langs'], 'include': include if include is not None else config['include'],
+              'legacy_cache':legacy_cache if legacy_cache is not None else config.get('legacy_cache',False)}
     sources = {s['path']: s for s in fresh['sources'] if s['included'] and s['language']
                and (not config['langs'] or s['language'] in config['langs'])
                and (not config['include'] or any(fnmatchcase(s['path'], p) for p in config['include']))}
@@ -198,7 +240,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
         occupied.add(file_id)
         engine = backend(s['language'], path)['id']
         if prior and prior['sha256'] == s['sha256'] and prior['parser_id'] == engine and prior['state'] != 'unavailable':
-            row = json.loads(prior['document'])
+            row = old_documents[prior['id']]
             retained[path] = row
         elif not s.get('encoding'):
             unavailable[path] = {'source_id':s['id'],'path':path,'sha256':s['sha256'],'language':s['language'],
@@ -211,7 +253,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
     with ThreadPoolExecutor(max_workers=workers) as pool:
         parsed = list(pool.map(_parse_item, items))
     results = {r['path']: r for r in parsed} | retained | unavailable
-    if not parsed and not unavailable and set(retained)==set(old) and not renames:
+    if not parsed and not unavailable and set(retained)==set(old) and not renames and not legacy_cache:
         with connection(store,write=True) as db:
             require(_meta(db,'version',0)==previous_version,'Concurrent skeleton sync; retry')
             db.execute('UPDATE files SET commit_id=?',(commit,))
@@ -224,7 +266,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
     changed, suspect, deleted = set(), set(), set()
     with connection(store, write=True) as db:
         require(_meta(db, 'version', 0) == previous_version, 'Concurrent skeleton sync; retry')
-        old_nodes = {r['id']: json.loads(r['document']) for r in db.execute('SELECT id,document FROM nodes')}
+        old_nodes = {r['id']:dict(json.loads(r['document']),file_id=r['file_id']) for r in db.execute('SELECT id,file_id,document FROM nodes')}
         old_edges = [dict(r) for r in db.execute("SELECT * FROM edges WHERE kind='call'")]
         new_nodes, contracts, fts_changed, affected_files = {}, set(), set(), set()
         for path, row in sorted(results.items()):
@@ -234,7 +276,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
             # Preserve moved or cosmetic-equivalent declarations using a unique verified match.
             if prior and path not in retained:
                 idmap = {}
-                previous = json.loads(prior['document'])
+                previous = old_documents[prior['id']]
                 lookup = defaultdict(list)
                 for n in previous['symbols']:
                     lookup[(n['kind'], n['qualified_name'], n['signature'])].append(n['id'])
@@ -259,19 +301,21 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
                 affected_files.add(file_id)
             classification = None
             if prior and path not in retained and path not in unavailable:
-                before = json.loads(prior['document'])
-                classification = classify_change(graph, s, before.get('text'), next(t for x,t in items if x['path']==path))['kind']
+                before = old_documents[prior['id']]
+                classification = ('cosmetic' if before.get('syntax_sha')==row.get('syntax_sha') and row.get('syntax_sha')
+                                  else 'contract' if before.get('contract_sha')!=row.get('contract_sha') else 'implementation')
                 before_imports = [x['text'] for x in before['sites'] if x['kind']=='import']
                 after_imports = [x['text'] for x in row['sites'] if x['kind']=='import']
                 if before_imports != after_imports and classification != 'cosmetic':
                     contracts.update(n['id'] for n in before['symbols'])
                     changed.update(n['id'] for n in row['symbols'])
-            row['text'] = next((t for x,t in items if x['path']==path), row.get('text', ''))
             stamp = s['sha256'] + ':' + row['parser_id']
             db.execute('''INSERT INTO files VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
              path=excluded.path,sha256=excluded.sha256,language=excluded.language,parser_id=excluded.parser_id,
              state=excluded.state,commit_id=excluded.commit_id,updated_at=excluded.updated_at,document=excluded.document''',
-             (file_id,path,s['sha256'],s['language'],row['parser_id'],row['state'],commit,stamp,canonical(row)))
+             (file_id,path,s['sha256'],s['language'],row['parser_id'],row['state'],commit,stamp,canonical({k:v for k,v in row.items() if k not in {'symbols','sites','text'}})))
+            from .structure import cache_key
+            db.execute('INSERT OR REPLACE INTO structure_keys VALUES (?,?)',(cache_key(s),file_id))
             if file_id in affected_files:
                 save_sites(db,file_id,row['sites'])
             for n in row['symbols']:
@@ -295,7 +339,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
                  file_id=excluded.file_id,kind=excluded.kind,name=excluded.name,qualified_name=excluded.qualified_name,
                  parent_id=excluded.parent_id,start_line=excluded.start_line,end_line=excluded.end_line,
                  signature=excluded.signature,body_sha=excluded.body_sha,updated_at=excluded.updated_at,document=excluded.document''',
-                 (n['id'],file_id,n['kind'],n['name'],n['qualified_name'],n['parent_id'],n['start_line'],n['end_line'],n['signature'],n['body_sha'],n['body_sha'],canonical(n)))
+                 (n['id'],file_id,n['kind'],n['name'],n['qualified_name'],n['parent_id'],n['start_line'],n['end_line'],n['signature'],n['body_sha'],n['body_sha'],canonical({k:v for k,v in n.items() if k!='file_id'})))
         deleted = old_nodes.keys() - new_nodes.keys()
         contracts.update(deleted)
         suspect = {e['src_id'] for e in old_edges if e['dst_id'] in contracts} & new_nodes.keys() - changed
@@ -335,7 +379,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
             if sem and sem['status'] == 'current':
                 continue
             degree = db.execute("SELECT count(*) FROM edges WHERE dst_id=? AND kind='call'", (n['id'],)).fetchone()[0]
-            estimate = max(128, (len(n.get('source_text','').encode('utf-8')) + 2)//3 + 512)
+            estimate = max(128, (n['end_byte'] - n['start_byte'] + 2)//3 + 512)
             db.execute('INSERT OR IGNORE INTO semantic_tasks(node_id,body_sha,state,priority,estimated_tokens) VALUES (?,?,?,?,?)',
                        (n['id'],n['body_sha'],'queued',degree*10 - (1 if sem and sem['status']=='suspect' else 0),estimate))
         update_search(db, fts_changed | changed | suspect | deleted)
@@ -346,7 +390,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
         counts = {t: db.execute('SELECT count(*) FROM '+t).fetchone()[0] for t in ('files','nodes','edges','semantic_tasks')}
     from .structure import cache_key
     for path, row in results.items():
-        if row['source_id'] == sources[path]['id']:
+        if config['legacy_cache'] and row['source_id'] == sources[path]['id']:
             key = cache_key(sources[path])
             store.save_structure(key, dict(row, index_id=key))
     return {**counts,**resolution,'unavailable_files':len(unavailable),'parsed_files':len(parsed),'cache_hits':len(retained),'changed':sorted(changed),

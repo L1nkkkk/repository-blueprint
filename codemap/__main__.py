@@ -32,11 +32,13 @@ def main(argv=None):
     init.add_argument('--budget', type=int, default=0)
     init.add_argument('--langs', help='Comma-separated languages')
     init.add_argument('--include', action='append')
+    init.add_argument('--legacy-cache', action='store_true', help='Also persist the legacy structure cache')
     for name in ('sync', 'doctor', 'reindex'):
         sub = commands.add_parser(name)
         sub.add_argument('project', type=Path)
         if name == 'sync':
             sub.add_argument('--budget', type=int, default=0)
+            sub.add_argument('--legacy-cache', action='store_true', default=None)
     validate = commands.add_parser('validate', help='校验 JSON 交换文件')
     validate.add_argument('graph', type=Path)
     validate.add_argument('--source-root', type=Path)
@@ -124,16 +126,16 @@ def main(argv=None):
                     if set(patterns) != set(store.read()['inventory']['exclusion_patterns']):
                         raise ValueError('Existing map has different exclusions; choose a new output')
                 from .skeleton import sync
-                sync(store, budget=args.budget, langs=args.langs.split(',') if args.langs else None, include=args.include)
+                sync(store, budget=args.budget, langs=args.langs.split(',') if args.langs else None, include=args.include, legacy_cache=args.legacy_cache)
             else:
-                store = initialize_project(args.root, args.output, excludes=args.exclude, budget=args.budget, langs=args.langs.split(',') if args.langs else None, include=args.include)
+                store = initialize_project(args.root, args.output, excludes=args.exclude, budget=args.budget, langs=args.langs.split(',') if args.langs else None, include=args.include, legacy_cache=args.legacy_cache)
             result = {'project_directory': str(Path(store.path).parent), **status(store)}
         else:
             store = open_project(args.project)
             graph = store.read()
             if args.command in {'sync', 'doctor', 'reindex'}:
                 from .skeleton import sync, doctor, reindex
-                result = sync(store, budget=args.budget) if args.command == 'sync' else reindex(store) if args.command == 'reindex' else doctor(store)
+                result = sync(store, budget=args.budget, legacy_cache=args.legacy_cache) if args.command == 'sync' else reindex(store) if args.command == 'reindex' else doctor(store)
             elif args.command == 'status':
                 result = status(store, check_snapshot=args.check_snapshot)
             elif args.command == 'metrics':

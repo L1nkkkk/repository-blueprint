@@ -34,7 +34,7 @@ def benchmark(root, excludes=()):
         with skeleton.connection(store) as db:
             nodes=[dict(r) for r in db.execute("SELECT * FROM nodes WHERE kind IN ('function','method') ORDER BY id LIMIT 80")]
             counts={t:db.execute('SELECT count(*) FROM '+t).fetchone()[0] for t in ('files','nodes','edges')}
-            lines=sum(len(json.loads(r[0]).get('text','').splitlines()) for r in db.execute('SELECT document FROM files'))
+            lines=sum(json.loads(r[0]).get('line_count',0) for r in db.execute('SELECT document FROM files'))
             states={r[0]:r[1] for r in db.execute('SELECT state,count(*) FROM files GROUP BY state')}
         timings={k:[] for k in ('find_symbol','callers','callees','search','repo_map')}
         for n in nodes:

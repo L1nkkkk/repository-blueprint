@@ -334,6 +334,36 @@ class SkeletonTests(unittest.TestCase):
         self.assertEqual(report['resolved_sites'],2)
         self.assertTrue(sk.doctor(self.store)['ok'])
 
+
+    def test_slim_documents_disk_reads_optional_cache_and_upgrade_guard(self):
+        with sk.connection(self.store) as db:
+            docs=[json.loads(r[0]) for r in db.execute('SELECT document FROM files')]
+            self.assertTrue(all(not {'text','symbols','sites'} & d.keys() for d in docs))
+            nodes=[json.loads(r[0]) for r in db.execute('SELECT document FROM nodes')]
+            self.assertTrue(all('source_text' not in n for n in nodes))
+            self.assertEqual(db.execute('SELECT count(*) FROM structure_cache').fetchone()[0],0)
+            row=db.execute('SELECT * FROM nodes WHERE name=?',('leaf',)).fetchone()
+            path,code=ex._disk_node(db,row)
+            self.assertEqual(path,'a.py')
+            self.assertEqual(code.replace('\r\n','\n'),'def leaf(x=1):\n    return x + 1')
+            self.assertEqual(sha256(code.encode()).hexdigest(),row['body_sha'])
+        # The existing UI/index API is reconstructed from relations without extra persisted copies.
+        from codemap.structure import query_index
+        self.assertEqual(query_index(self.store,source='a.py')['records'][0]['name'],'leaf')
+        self.file.write_text(self.code.replace('x + 1','x + 5'),encoding='utf-8')
+        with sk.connection(self.store) as db:
+            with self.assertRaisesRegex(ProtocolError,'Source changed'):
+                ex._disk_node(db,db.execute('SELECT * FROM nodes WHERE name=?',('leaf',)).fetchone())
+        sk.sync(self.store,legacy_cache=True)
+        with sk.connection(self.store,write=True) as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM structure_cache').fetchone()[0],1)
+            sk._save_meta(db,'storage_version',2)
+        with self.assertRaisesRegex(ProtocolError,'requires rebuild'):
+            sk.sync(self.store)
+        with sk.connection(self.store) as db:
+            self.assertEqual(sk._meta(db,'storage_version'),2)
+            self.assertEqual(db.execute('SELECT count(*) FROM nodes').fetchone()[0],3)
+
     def test_exact_utf8_spans(self):
         code='@decorator\ndef café(x="你"):\n    return x\n'
         source={'id':'source:test','path':'u.py','language':'python','sha256':sha256(code.encode()).hexdigest()}

@@ -5,7 +5,7 @@ SITE_SCHEMA = '''
 CREATE TABLE IF NOT EXISTS sites (
  file_id TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE, ordinal INTEGER NOT NULL,
  src_id TEXT NOT NULL, kind TEXT NOT NULL, target_name TEXT NOT NULL, text TEXT NOT NULL,
- site_line INTEGER NOT NULL, PRIMARY KEY(file_id,ordinal));
+ site_line INTEGER NOT NULL, end_line INTEGER NOT NULL, text_truncated INTEGER NOT NULL, PRIMARY KEY(file_id,ordinal));
 CREATE INDEX IF NOT EXISTS idx_sites_target ON sites(target_name);
 CREATE INDEX IF NOT EXISTS idx_sites_origin ON sites(src_id,kind,site_line);
 '''
@@ -13,9 +13,9 @@ CREATE INDEX IF NOT EXISTS idx_sites_origin ON sites(src_id,kind,site_line);
 
 def save_sites(db, file_id, sites):
     db.execute('DELETE FROM sites WHERE file_id=?', (file_id,))
-    db.executemany('INSERT INTO sites VALUES (?,?,?,?,?,?,?)',
+    db.executemany('INSERT INTO sites VALUES (?,?,?,?,?,?,?,?,?)',
                    [(file_id,i,s['enclosing_symbol_id'] or file_id,s['kind'],
-                     s['text'].replace('::','.').replace('->','.'),s['text'],s['start_line'])
+                     s['text'].replace('::','.').replace('->','.'),s['text'],s['start_line'],s['end_line'],int(s.get('text_truncated',False)))
                     for i,s in enumerate(sites)])
 
 

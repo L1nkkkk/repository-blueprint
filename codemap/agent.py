@@ -38,7 +38,7 @@ TOOLS = [
          {'root': string('Absolute repository directory.'), 'output': string('Absolute new map directory. Default: root/.codemap.'),
           'exclude': {'type': 'array', 'items': string('Explicit exclusion pattern.'), 'default': []},
           'budget': integer(0, 0, 100000000), 'langs': {'type':'array','items':string('Language')},
-          'include': {'type':'array','items':string('Relative glob')}, 'detail': DETAIL}, ['root'], idempotent=True),
+          'include': {'type':'array','items':string('Relative glob')}, 'legacy_cache': {'type':'boolean','default':False}, 'detail': DETAIL}, ['root'], idempotent=True),
     tool('status', 'Read coverage, task state and revision. Check the source snapshot before resuming or delivering. A queue is not a running AI.',
          {'project': PROJECT, 'check_snapshot': {'type': 'boolean', 'default': True}, 'detail': DETAIL}, ['project'], read_only=True),
     tool('update', 'Preview classified file changes, rename matches and recorded dependency impact; apply the exact preview to archive the graph and queue rereading. History lists snapshots, compare returns differences and restore_id, restore creates a new graph revision without changing source files. Preserve layouts and identities. No AI is started. Resolve scan gaps before applying and pause active readers before restoring.',
@@ -113,7 +113,7 @@ TOOLS += [
     tool('repo_map','Compressed directory/signature map within a conservative token upper bound.',
          {'project':PROJECT,'path':{'type':'string'},'budget_tokens':integer(2000,0,32000)},['project'],read_only=True),
     tool('sync','Reconcile the persistent skeleton and queue only missing/stale/suspect semantics. No AI is started.',
-         {'project':PROJECT,'budget':integer(0,0,100000000)},['project'],idempotent=True),
+         {'project':PROJECT,'budget':integer(0,0,100000000),'legacy_cache':{'type':'boolean'}},['project'],idempotent=True),
     tool('reindex','Explicitly rebuild the complete FTS index for repair.',
          {'project':PROJECT},['project'],idempotent=True),
     tool('doctor','Check relational constraints, semantic hashes and FTS consistency.',
@@ -255,10 +255,10 @@ class AgentTools:
                         patterns.append(output.relative_to(root).as_posix())
                     require(set(patterns) == set(graph['inventory']['exclusion_patterns']), 'Existing map has different exclusions; choose a new output.')
                 from .skeleton import sync
-                sync(store, budget=args.get('budget',0), langs=args.get('langs'), include=args.get('include'))
+                sync(store, budget=args.get('budget',0), langs=args.get('langs'), include=args.get('include'), legacy_cache=args.get('legacy_cache'))
                 reopened = True
             else:
-                store = initialize_project(root, output, excludes=args.get('exclude', []), budget=args.get('budget',0), langs=args.get('langs'), include=args.get('include'))
+                store = initialize_project(root, output, excludes=args.get('exclude', []), budget=args.get('budget',0), langs=args.get('langs'), include=args.get('include'), legacy_cache=args.get('legacy_cache'))
                 reopened = False
             return {'project_directory': str(output), 'reopened': reopened, **status_view(status(store, check_snapshot=True), args.get('detail', 'summary'))}
         directory = absolute(args['project'])

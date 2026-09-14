@@ -3,6 +3,7 @@ from copy import deepcopy
 from difflib import unified_diff
 import time
 
+from .store import encode_source
 from .core import TABLES, canonical, digest, require, validate_graph
 from .change_analysis import snapshot_texts
 from .updates import scan_update, update_plan, migrate_snapshot
@@ -119,6 +120,6 @@ def restore_snapshot(store, revision, *, expected_revision, restore_id):
             require(not db.execute("SELECT 1 FROM reader_requests WHERE state='running'").fetchone(), '请先暂停正在执行的画布请求。')
         db.execute('INSERT INTO snapshot_history VALUES (?, ?, ?)', (expected_revision, current['project']['snapshot_id'], canonical(current)))
         db.execute('UPDATE graph SET document=? WHERE id=1', (canonical(candidate),))
-        db.executemany('INSERT OR IGNORE INTO source_texts VALUES (?, ?)', new_texts.items())
+        db.executemany('INSERT OR IGNORE INTO source_texts VALUES (?, ?)', ((key,encode_source(value)) for key,value in new_texts.items()))
     return {'revision': candidate['project']['revision'], 'restored_from': revision, 'archived_revision': expected_revision,
             'scope_note': preview['scope_note']}
