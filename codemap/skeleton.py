@@ -11,6 +11,7 @@ from pathlib import Path
 import textwrap
 
 from .core import canonical, require
+from .resolution import SITE_SCHEMA, save_sites, resolve as _resolve
 from .repository import scan_repository, source_bytes, decode_text
 from .syntax import backend
 from .parser_runner import parse
@@ -70,11 +71,15 @@ def summary(store):
 def initialize(store):
     with connection(store) as db:
         db.execute('PRAGMA journal_mode=WAL')
-        db.executescript(SCHEMA)
+        db.executescript(SCHEMA + SITE_SCHEMA)
         # One-time rowid mapping for pre-scale databases; no FTS rebuild.
         if not _meta(db, 'search_rows_version', 0):
             db.execute('INSERT OR IGNORE INTO search_rows(rowid,node_id) SELECT rowid,node_id FROM search')
             _save_meta(db, 'search_rows_version', 1)
+        if not _meta(db, 'sites_version', 0):
+            for row in db.execute('SELECT id,document FROM files').fetchall():
+                save_sites(db,row['id'],json.loads(row['document'])['sites'])
+            _save_meta(db,'sites_version',1)
 
 
 def _meta(db, key, default=None):
@@ -127,42 +132,6 @@ def reindex(store):
     with connection(store, write=True) as db:
         refresh_search(db)
         return {'reindexed_nodes':db.execute('SELECT count(*) FROM nodes').fetchone()[0]}
-
-
-def _resolve(db):
-    nodes = [dict(r) for r in db.execute('SELECT * FROM nodes ORDER BY id')]
-    by_name, local = defaultdict(list), defaultdict(list)
-    for n in nodes:
-        for key in {n['name'], n['qualified_name']}:
-            by_name[key].append(n)
-        local[(n['file_id'], n['qualified_name'])].append(n)
-    db.execute('DELETE FROM edges')
-    edges = set()
-    for n in nodes:
-        edges.add((n['parent_id'] or n['file_id'], n['id'], 'contains', 'resolved_local', n['start_line']))
-    for f in db.execute('SELECT id,document FROM files ORDER BY id'):
-        for s in json.loads(f['document'])['sites']:
-            src = s['enclosing_symbol_id'] or f['id']
-            name = s['text'].replace('::', '.').replace('->', '.')
-            candidates, confidence = [], 'unresolved'
-            if s['kind'] == 'call':
-                candidates = local.get((f['id'], name), []) if '.' in name else []
-                if '.' not in name:
-                    # Lexical scopes are considered before project-wide names.
-                    source = db.execute('SELECT qualified_name FROM nodes WHERE id=?', (src,)).fetchone()
-                    scope = source[0].split('.') if source else []
-                    while scope and not candidates:
-                        candidates = local.get((f['id'], '.'.join(scope + [name])), [])
-                        scope.pop()
-                    candidates = candidates or local.get((f['id'], name), [])
-                if candidates:
-                    confidence = 'resolved_local' if len(candidates) == 1 else 'ambiguous'
-                else:
-                    candidates = by_name.get(name, [])
-                    confidence = 'unique_in_project' if len(candidates) == 1 else 'ambiguous' if candidates else 'unresolved'
-            for dst in [c['id'] for c in candidates] or ['name:' + s['text']]:
-                edges.add((src, dst, s['kind'], confidence, s['start_line']))
-    db.executemany('INSERT INTO edges VALUES (?,?,?,?,?)', sorted(edges))
 
 
 def _rebind_cosmetic(db, before, after):
@@ -257,7 +226,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
         require(_meta(db, 'version', 0) == previous_version, 'Concurrent skeleton sync; retry')
         old_nodes = {r['id']: json.loads(r['document']) for r in db.execute('SELECT id,document FROM nodes')}
         old_edges = [dict(r) for r in db.execute("SELECT * FROM edges WHERE kind='call'")]
-        new_nodes, contracts, fts_changed = {}, set(), set()
+        new_nodes, contracts, fts_changed, affected_files = {}, set(), set(), set()
         for path, row in sorted(results.items()):
             s = sources[path]
             prior = old.get(path) or old.get(renamed.get(path))
@@ -286,6 +255,8 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
                 for site in row['sites']:
                     site['enclosing_symbol_id'] = idmap.get(site['enclosing_symbol_id'], site['enclosing_symbol_id'])
             row.update(source_id=file_id, path=path, source=s)
+            if path not in retained or path in renamed:
+                affected_files.add(file_id)
             classification = None
             if prior and path not in retained and path not in unavailable:
                 before = json.loads(prior['document'])
@@ -301,6 +272,8 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
              path=excluded.path,sha256=excluded.sha256,language=excluded.language,parser_id=excluded.parser_id,
              state=excluded.state,commit_id=excluded.commit_id,updated_at=excluded.updated_at,document=excluded.document''',
              (file_id,path,s['sha256'],s['language'],row['parser_id'],row['state'],commit,stamp,canonical(row)))
+            if file_id in affected_files:
+                save_sites(db,file_id,row['sites'])
             for n in row['symbols']:
                 n = dict(n, file_id=file_id)
                 new_nodes[n['id']] = n
@@ -337,10 +310,15 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
             db.execute('DELETE FROM semantic_tasks WHERE node_id=?', (id,))
             db.execute('DELETE FROM nodes WHERE id=?', (id,))
         active = {n['file_id'] for n in new_nodes.values()} | {r['source_id'] for r in results.values()}
+        removed_files = set()
         for r in db.execute('SELECT id FROM files').fetchall():
             if r['id'] not in active:
+                removed_files.add(r['id'])
                 db.execute('DELETE FROM files WHERE id=?', (r['id'],))
-        _resolve(db)
+        before_candidates = {(n['id'],n['name'],n['qualified_name'],n['file_id']) for n in old_nodes.values()}
+        after_candidates = {(n['id'],n['name'],n['qualified_name'],n['file_id']) for n in new_nodes.values()}
+        affected_names = {name for n in before_candidates ^ after_candidates for name in n[1:3]}
+        resolution = _resolve(db, file_ids=affected_files, names=affected_names, removed_sources=deleted | removed_files)
         before_targets, after_targets = defaultdict(set), defaultdict(set)
         for e in old_edges:
             before_targets[e['src_id']].add((e['dst_id'],e['confidence']))
@@ -371,7 +349,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
         if row['source_id'] == sources[path]['id']:
             key = cache_key(sources[path])
             store.save_structure(key, dict(row, index_id=key))
-    return {**counts,'unavailable_files':len(unavailable),'parsed_files':len(parsed),'cache_hits':len(retained),'changed':sorted(changed),
+    return {**counts,**resolution,'unavailable_files':len(unavailable),'parsed_files':len(parsed),'cache_hits':len(retained),'changed':sorted(changed),
             'deleted':sorted(deleted),'suspect':sorted(suspect),'renames':renames,'budget_remaining':budget,'llm_tokens':0}
 
 

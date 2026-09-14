@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from hashlib import sha256
 import json
+import random
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -298,6 +299,39 @@ class SkeletonTests(unittest.TestCase):
         sk.sync(self.store)
         self.assertFalse(sk.doctor(self.store)['ok'])
         sk.reindex(self.store)
+        self.assertTrue(sk.doctor(self.store)['ok'])
+
+
+    def test_subset_resolution_matches_full_rebuild_after_seeded_edits(self):
+        randomizer=random.Random(412)
+        for i in range(8):
+            (self.root/f'r{i}.py').write_text(f'def f{i}():\n return f{(i+1)%8}()\n')
+        sk.sync(self.store)
+        for round in range(12):
+            for i in randomizer.sample(range(8),3):
+                targets=randomizer.sample(range(8),2)
+                # Include same-line calls, duplicate names, unresolved targets and deletion/reintroduction.
+                code=(f'def f{i if round%3 else targets[0]}():\n f{targets[0]}(); f{targets[1]}()\n'
+                      if round%4 else '# removed\n')
+                (self.root/f'r{i}.py').write_text(code)
+            sk.sync(self.store)
+            with sk.connection(self.store,write=True) as db:
+                incremental={tuple(r) for r in db.execute('SELECT * FROM edges')}
+                statements=[]
+                db.set_trace_callback(statements.append)
+                sk._resolve(db)
+                db.set_trace_callback(None)
+                complete={tuple(r) for r in db.execute('SELECT * FROM edges')}
+                self.assertEqual(incremental,complete,f'round {round}')
+                self.assertFalse(any('SELECT qualified_name FROM nodes WHERE' in q for q in statements))
+
+    def test_body_only_edit_resolves_only_its_file_sites(self):
+        for i in range(20):
+            (self.root/f'isolated{i}.py').write_text(f'def isolated{i}():\n return missing{i}()\n')
+        sk.sync(self.store)
+        self.file.write_text(self.code.replace('x + 1','x + 2'),encoding='utf-8')
+        report=sk.sync(self.store)
+        self.assertEqual(report['resolved_sites'],2)
         self.assertTrue(sk.doctor(self.store)['ok'])
 
     def test_exact_utf8_spans(self):

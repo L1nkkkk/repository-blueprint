@@ -11,3 +11,11 @@ Scope: TASK_SCALE_BENCH.md stage A. Stage B requires separate user confirmation 
 - Full Python suite: 168 tests, 167 passed and one existing Windows symlink-permission skip. JavaScript: 48 passed.
 
 A2–A4 pending. Ten-thousand-line acceptance remains the last completed scale benchmark; no claim of 100K validation.
+
+## A2 — affected call-site resolution
+
+- Added persistent file/target/origin indexes for syntax sites. Only changed-file sites and sites matching changed candidate names are resolved again.
+- Sites sharing one (source, kind, line) edge key are processed together, preserving other targets on the same line.
+- Node name/scope indexes are loaded once; the resolver performs no per-call enclosing-node SELECT.
+- Twelve seeded random edit rounds compare subset results to a full reference rebuild, including deleted/reintroduced symbols, duplicate names and same-line calls. A body-only edit resolves exactly its two local sites despite 20 unrelated files.
+- Full Python suite: 170 tests, 169 passed and one existing skip. JavaScript: 48 passed.
