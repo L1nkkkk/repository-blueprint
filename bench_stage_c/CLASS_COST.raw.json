@@ -1,0 +1,597 @@
+{
+  "tokenizer": "tiktoken cl100k_base",
+  "sample_count": 50,
+  "kind": "class",
+  "seed": "scheduler-order-after-fixed-map",
+  "sampling_mode": "top10pct",
+  "priority_preconditioned": true,
+  "degree_cutoffs": {
+    "top10pct": 16,
+    "middle10pct": [
+      0,
+      0
+    ]
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "count": 20,
+      "submit_seconds": 5.387133199983509,
+      "accepted": 20
+    },
+    {
+      "batch": 2,
+      "count": 20,
+      "submit_seconds": 5.400257400004193,
+      "accepted": 20
+    },
+    {
+      "batch": 3,
+      "count": 10,
+      "submit_seconds": 2.7076364000095055,
+      "accepted": 10
+    }
+  ],
+  "symbols": [
+    {
+      "node_id": "symbol:004006a8ad9b8d05ca37d524",
+      "path": "test-data/unit/fixtures/exception.pyi",
+      "signature": "class int()",
+      "degree": 86,
+      "stratum": "top10pct",
+      "input_tokens": 5435,
+      "output_tokens": 36,
+      "estimated_tokens": 517,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:00a75ad83d42b1a5f144a764",
+      "path": "mypy/types.py",
+      "signature": "class TypeVarId()",
+      "degree": 39,
+      "stratum": "top10pct",
+      "input_tokens": 3129,
+      "output_tokens": 39,
+      "estimated_tokens": 1339,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:00f137cb295229e9a5436aff",
+      "path": "test-data/unit/fixtures/exception.pyi",
+      "signature": "class list()",
+      "degree": 223,
+      "stratum": "top10pct",
+      "input_tokens": 6143,
+      "output_tokens": 36,
+      "estimated_tokens": 518,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:01b906879c23c165c3cd64d9",
+      "path": "test-data/unit/fixtures/callable.pyi",
+      "signature": "class type()",
+      "degree": 103,
+      "stratum": "top10pct",
+      "input_tokens": 6286,
+      "output_tokens": 36,
+      "estimated_tokens": 530,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:025dbc5b3b0363dc2fdce57d",
+      "path": "test-data/unit/fixtures/for_else_exception.pyi",
+      "signature": "class type()",
+      "degree": 103,
+      "stratum": "top10pct",
+      "input_tokens": 6288,
+      "output_tokens": 36,
+      "estimated_tokens": 532,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:0284193a28e9cc003c3c0746",
+      "path": "test-data/unit/fixtures/staticmethod.pyi",
+      "signature": "class object()",
+      "degree": 19,
+      "stratum": "top10pct",
+      "input_tokens": 1205,
+      "output_tokens": 36,
+      "estimated_tokens": 529,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:031bfbbb457d44d207ebcd33",
+      "path": "test-data/unit/fixtures/property.pyi",
+      "signature": "class object()",
+      "degree": 18,
+      "stratum": "top10pct",
+      "input_tokens": 1079,
+      "output_tokens": 36,
+      "estimated_tokens": 529,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:03cd60a6967688f75e69eaae",
+      "path": "test-data/unit/fixtures/plugin_attrs.pyi",
+      "signature": "class str()",
+      "degree": 189,
+      "stratum": "top10pct",
+      "input_tokens": 6339,
+      "output_tokens": 36,
+      "estimated_tokens": 517,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:03fc993ae0ef38fd76bd1e9d",
+      "path": "test-data/unit/fixtures/object_hashable.pyi",
+      "signature": "class tuple()",
+      "degree": 116,
+      "stratum": "top10pct",
+      "input_tokens": 6317,
+      "output_tokens": 36,
+      "estimated_tokens": 518,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:0429afbf765314dc11bc5ba2",
+      "path": "test-data/unit/fixtures/staticmethod.pyi",
+      "signature": "class dict()",
+      "degree": 22,
+      "stratum": "top10pct",
+      "input_tokens": 1355,
+      "output_tokens": 36,
+      "estimated_tokens": 518,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:04c6eb2fb473b110ca26a72f",
+      "path": "test-data/unit/fixtures/float.pyi",
+      "signature": "class type()",
+      "degree": 103,
+      "stratum": "top10pct",
+      "input_tokens": 6288,
+      "output_tokens": 36,
+      "estimated_tokens": 531,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:0500516d43fd616d7252790a",
+      "path": "test-data/unit/fixtures/property.pyi",
+      "signature": "class bool()",
+      "degree": 72,
+      "stratum": "top10pct",
+      "input_tokens": 4416,
+      "output_tokens": 36,
+      "estimated_tokens": 518,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:06187b5c43246ccabbf1a81c",
+      "path": "test-data/unit/lib-stub/types.pyi",
+      "signature": "class UnionType()",
+      "degree": 68,
+      "stratum": "top10pct",
+      "input_tokens": 4328,
+      "output_tokens": 37,
+      "estimated_tokens": 532,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:06a30965d7e45bf4b0dcbcfa",
+      "path": "test-data/unit/fixtures/tuple-simple.pyi",
+      "signature": "class int()",
+      "degree": 86,
+      "stratum": "top10pct",
+      "input_tokens": 5521,
+      "output_tokens": 36,
+      "estimated_tokens": 517,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:07692fe8dd46e8e19e5f1a09",
+      "path": "mypyc/test-data/fixtures/ir.py",
+      "signature": "class list(Generic[_T], Sequence[_T], Iterable[_T])",
+      "degree": 223,
+      "stratum": "top10pct",
+      "input_tokens": 6994,
+      "output_tokens": 49,
+      "estimated_tokens": 961,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:0989bbda204ee338334926c1",
+      "path": "test-data/unit/fixtures/dict-full.pyi",
+      "signature": "class object()",
+      "degree": 17,
+      "stratum": "top10pct",
+      "input_tokens": 1054,
+      "output_tokens": 36,
+      "estimated_tokens": 569,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:0a23648c601f7af721fb5b0d",
+      "path": "test-data/unit/fixtures/notimplemented.pyi",
+      "signature": "class int()",
+      "degree": 86,
+      "stratum": "top10pct",
+      "input_tokens": 5521,
+      "output_tokens": 36,
+      "estimated_tokens": 517,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:0a3c9ddb39f2bb73539cf867",
+      "path": "mypy/errorcodes.py",
+      "signature": "class ErrorCode()",
+      "degree": 80,
+      "stratum": "top10pct",
+      "input_tokens": 5436,
+      "output_tokens": 37,
+      "estimated_tokens": 902,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:0b5c6edbcb9656231b13de96",
+      "path": "test-data/unit/fixtures/transform.pyi",
+      "signature": "class object()",
+      "degree": 17,
+      "stratum": "top10pct",
+      "input_tokens": 1069,
+      "output_tokens": 36,
+      "estimated_tokens": 529,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:0bf5d1d5a3b7f7e4e01a48f2",
+      "path": "test-data/unit/fixtures/isinstancelist.pyi",
+      "signature": "class bool(int)",
+      "degree": 72,
+      "stratum": "top10pct",
+      "input_tokens": 5065,
+      "output_tokens": 37,
+      "estimated_tokens": 519,
+      "submit_seconds_batch": 5.387133199983509
+    },
+    {
+      "node_id": "symbol:0cdbbc99ba2946c0cf2a6d6f",
+      "path": "mypy/types.py",
+      "signature": "class LiteralType(ProperType)",
+      "degree": 42,
+      "stratum": "top10pct",
+      "input_tokens": 4014,
+      "output_tokens": 42,
+      "estimated_tokens": 2296,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:0dbb8741cd9593b2f161a0d1",
+      "path": "test-data/unit/fixtures/enum.pyi",
+      "signature": "class tuple(Generic[T])",
+      "degree": 116,
+      "stratum": "top10pct",
+      "input_tokens": 6535,
+      "output_tokens": 39,
+      "estimated_tokens": 536,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:0ddfc036e79b0e02c4e5bd9c",
+      "path": "test-data/unit/fixtures/exception.pyi",
+      "signature": "class tuple(Generic[T])",
+      "degree": 116,
+      "stratum": "top10pct",
+      "input_tokens": 6634,
+      "output_tokens": 39,
+      "estimated_tokens": 537,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:0e0fb32891a406f0158004ad",
+      "path": "test-data/unit/fixtures/ops.pyi",
+      "signature": "class bool(int)",
+      "degree": 72,
+      "stratum": "top10pct",
+      "input_tokens": 4489,
+      "output_tokens": 37,
+      "estimated_tokens": 519,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:0e7b83bf445476aeb06c534b",
+      "path": "test-data/unit/fixtures/plugin_attrs.pyi",
+      "signature": "class bool(int)",
+      "degree": 72,
+      "stratum": "top10pct",
+      "input_tokens": 4561,
+      "output_tokens": 37,
+      "estimated_tokens": 519,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:0f753803045413785f18f11f",
+      "path": "test-data/unit/fixtures/tuple-simple.pyi",
+      "signature": "class tuple(Generic[T])",
+      "degree": 116,
+      "stratum": "top10pct",
+      "input_tokens": 6135,
+      "output_tokens": 39,
+      "estimated_tokens": 536,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:0faa8af0616547843a907b0b",
+      "path": "mypy/nodes.py",
+      "signature": "class SymbolTableNode()",
+      "degree": 48,
+      "stratum": "top10pct",
+      "input_tokens": 5438,
+      "output_tokens": 39,
+      "estimated_tokens": 4223,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:0fab1b5053c456cc29d09d40",
+      "path": "test-data/unit/fixtures/function.pyi",
+      "signature": "class int()",
+      "degree": 86,
+      "stratum": "top10pct",
+      "input_tokens": 5435,
+      "output_tokens": 36,
+      "estimated_tokens": 517,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:0fb4d1372f49e12824dc6545",
+      "path": "mypy/message_registry.py",
+      "signature": "class ErrorMessage()",
+      "degree": 110,
+      "stratum": "top10pct",
+      "input_tokens": 6406,
+      "output_tokens": 36,
+      "estimated_tokens": 661,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:1056c0c86a50b7adbd1434ec",
+      "path": "mypy/typeshed/stdlib/typing.pyi",
+      "signature": "class TypeVar()",
+      "degree": 512,
+      "stratum": "top10pct",
+      "input_tokens": 7060,
+      "output_tokens": 38,
+      "estimated_tokens": 1399,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:10ab58e3509f54a5f4104c4d",
+      "path": "test-data/unit/fixtures/tuple.pyi",
+      "signature": "class object()",
+      "degree": 17,
+      "stratum": "top10pct",
+      "input_tokens": 1114,
+      "output_tokens": 36,
+      "estimated_tokens": 541,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:110395ad51b5056d18c9a734",
+      "path": "mypy/types.py",
+      "signature": "class CallableType(FunctionLike)",
+      "degree": 64,
+      "stratum": "top10pct",
+      "input_tokens": 9674,
+      "output_tokens": 40,
+      "estimated_tokens": 9082,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:1160fe722b1e99751ff1d9bf",
+      "path": "test-data/unit/fixtures/type.pyi",
+      "signature": "class object()",
+      "degree": 17,
+      "stratum": "top10pct",
+      "input_tokens": 1099,
+      "output_tokens": 36,
+      "estimated_tokens": 560,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:11a34b4fa5008be5b8acf489",
+      "path": "mypy/typeshed/stdlib/builtins.pyi",
+      "signature": "class range(Sequence[int])",
+      "degree": 240,
+      "stratum": "top10pct",
+      "input_tokens": 6628,
+      "output_tokens": 39,
+      "estimated_tokens": 829,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:12018f6009a9fac5828edcd3",
+      "path": "test-data/unit/fixtures/for_else_exception.pyi",
+      "signature": "class dict(Mapping[T, V])",
+      "degree": 22,
+      "stratum": "top10pct",
+      "input_tokens": 1393,
+      "output_tokens": 41,
+      "estimated_tokens": 536,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:1240662d84c70b2da49e1c2c",
+      "path": "test-data/unit/fixtures/notimplemented.pyi",
+      "signature": "class str()",
+      "degree": 189,
+      "stratum": "top10pct",
+      "input_tokens": 6539,
+      "output_tokens": 36,
+      "estimated_tokens": 517,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:129be1d41361f8665a6da53e",
+      "path": "mypy/stubtest.py",
+      "signature": "class Error()",
+      "degree": 52,
+      "stratum": "top10pct",
+      "input_tokens": 4280,
+      "output_tokens": 37,
+      "estimated_tokens": 2084,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:12b922154682e6cc5df5a439",
+      "path": "test-data/unit/fixtures/typing-full.pyi",
+      "signature": "class TypeVar()",
+      "degree": 503,
+      "stratum": "top10pct",
+      "input_tokens": 6224,
+      "output_tokens": 37,
+      "estimated_tokens": 546,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:138c08b76c0b2bb016722ae7",
+      "path": "test-data/unit/fixtures/ops.pyi",
+      "signature": "class type()",
+      "degree": 103,
+      "stratum": "top10pct",
+      "input_tokens": 6274,
+      "output_tokens": 36,
+      "estimated_tokens": 518,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:13ba4dda408341592678db37",
+      "path": "test-data/unit/fixtures/alias.pyi",
+      "signature": "class type()",
+      "degree": 103,
+      "stratum": "top10pct",
+      "input_tokens": 5886,
+      "output_tokens": 36,
+      "estimated_tokens": 530,
+      "submit_seconds_batch": 5.400257400004193
+    },
+    {
+      "node_id": "symbol:14f1b9b96e468d556550afc2",
+      "path": "test-data/unit/fixtures/function.pyi",
+      "signature": "class dict()",
+      "degree": 22,
+      "stratum": "top10pct",
+      "input_tokens": 1399,
+      "output_tokens": 36,
+      "estimated_tokens": 518,
+      "submit_seconds_batch": 2.7076364000095055
+    },
+    {
+      "node_id": "symbol:1525c50e97f1d148ca66bb03",
+      "path": "mypy/test/typefixture.py",
+      "signature": "class TypeFixture()",
+      "degree": 17,
+      "stratum": "top10pct",
+      "input_tokens": 5075,
+      "output_tokens": 38,
+      "estimated_tokens": 5544,
+      "submit_seconds_batch": 2.7076364000095055
+    },
+    {
+      "node_id": "symbol:162bcffcaed72631fd3ba056",
+      "path": "test-data/unit/fixtures/len.pyi",
+      "signature": "class type()",
+      "degree": 103,
+      "stratum": "top10pct",
+      "input_tokens": 5986,
+      "output_tokens": 36,
+      "estimated_tokens": 530,
+      "submit_seconds_batch": 2.7076364000095055
+    },
+    {
+      "node_id": "symbol:17c8a6544da3babd9558866c",
+      "path": "test-data/unit/fixtures/__init_subclass__.pyi",
+      "signature": "class bool()",
+      "degree": 72,
+      "stratum": "top10pct",
+      "input_tokens": 4560,
+      "output_tokens": 36,
+      "estimated_tokens": 518,
+      "submit_seconds_batch": 2.7076364000095055
+    },
+    {
+      "node_id": "symbol:180ac0857b8b6c050cef36fe",
+      "path": "test-data/unit/fixtures/property.pyi",
+      "signature": "class type()",
+      "degree": 103,
+      "stratum": "top10pct",
+      "input_tokens": 6189,
+      "output_tokens": 36,
+      "estimated_tokens": 534,
+      "submit_seconds_batch": 2.7076364000095055
+    },
+    {
+      "node_id": "symbol:183bc2d21e3fda44dcf31760",
+      "path": "mypy/typeshed/stdlib/builtins.pyi",
+      "signature": "class set(MutableSet[_T])",
+      "degree": 508,
+      "stratum": "top10pct",
+      "input_tokens": 6977,
+      "output_tokens": 42,
+      "estimated_tokens": 1269,
+      "submit_seconds_batch": 2.7076364000095055
+    },
+    {
+      "node_id": "symbol:1843a3e3f63544f3743b5a59",
+      "path": "test-data/unit/fixtures/__new__.pyi",
+      "signature": "class dict()",
+      "degree": 22,
+      "stratum": "top10pct",
+      "input_tokens": 1443,
+      "output_tokens": 36,
+      "estimated_tokens": 518,
+      "submit_seconds_batch": 2.7076364000095055
+    },
+    {
+      "node_id": "symbol:18ae9c84a4d5af1ad67b82ec",
+      "path": "test-data/unit/fixtures/args.pyi",
+      "signature": "class str()",
+      "degree": 189,
+      "stratum": "top10pct",
+      "input_tokens": 6539,
+      "output_tokens": 36,
+      "estimated_tokens": 517,
+      "submit_seconds_batch": 2.7076364000095055
+    },
+    {
+      "node_id": "symbol:18d0d7e9a32fb5735411ade6",
+      "path": "test-data/unit/fixtures/isinstance_python3_10.pyi",
+      "signature": "class object()",
+      "degree": 17,
+      "stratum": "top10pct",
+      "input_tokens": 1086,
+      "output_tokens": 36,
+      "estimated_tokens": 529,
+      "submit_seconds_batch": 2.7076364000095055
+    },
+    {
+      "node_id": "symbol:19a1ce6a28b1fc12511219a1",
+      "path": "mypy/types.py",
+      "signature": "class UnpackType(ProperType)",
+      "degree": 98,
+      "stratum": "top10pct",
+      "input_tokens": 6953,
+      "output_tokens": 43,
+      "estimated_tokens": 1107,
+      "submit_seconds_batch": 2.7076364000095055
+    }
+  ],
+  "strata_summary": {
+    "top10pct": {
+      "count": 50,
+      "input_tokens": 241293,
+      "output_tokens": 1870,
+      "median_input_tokens": 5479.5,
+      "median_output_tokens": 36.0,
+      "submit_seconds_total": 242.8241759998491
+    }
+  }
+}
