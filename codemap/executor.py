@@ -8,7 +8,7 @@ from uuid import uuid4
 from hashlib import sha256
 
 from .core import canonical, require
-from .skeleton import connection, _meta, _save_meta, refresh_search
+from .skeleton import connection, _meta, _save_meta, update_search
 from .repository import decode_text
 
 
@@ -114,6 +114,6 @@ def submit(store, batch, now=None):
             db.execute('INSERT INTO semantics VALUES (?,?,?,?,?,?,?,?)',(id,node['body_sha'],'current',result['summary'],canonical(result['detail']),canonical(result['evidence']),result['model'],stamp))
             db.execute("UPDATE semantic_tasks SET state='done',lease_id=NULL,expires_at=NULL WHERE node_id=?",(id,))
             _save_meta(db,'budget_remaining',_meta(db,'budget_remaining',0)+t['estimated_tokens']-tokens)
-        refresh_search(db)
+        update_search(db, seen)
         db.execute('INSERT INTO semantic_receipts VALUES (?,?)',(batch['batch_id'],payload))
         return {'accepted':len(batch['results']),'reused':False,'budget_remaining':_meta(db,'budget_remaining',0)}

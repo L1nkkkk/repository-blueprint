@@ -114,6 +114,8 @@ TOOLS += [
          {'project':PROJECT,'path':{'type':'string'},'budget_tokens':integer(2000,0,32000)},['project'],read_only=True),
     tool('sync','Reconcile the persistent skeleton and queue only missing/stale/suspect semantics. No AI is started.',
          {'project':PROJECT,'budget':integer(0,0,100000000)},['project'],idempotent=True),
+    tool('reindex','Explicitly rebuild the complete FTS index for repair.',
+         {'project':PROJECT},['project'],idempotent=True),
     tool('doctor','Check relational constraints, semantic hashes and FTS consistency.',
          {'project':PROJECT},['project'],read_only=True),
     tool('semantic_claim','Claim exact source slices under a token reservation and expiring lease; usable by any host.',
@@ -189,7 +191,7 @@ class AgentTools:
             span.finish(result)
             return result
         store = open_project(absolute(args['project']))
-        if name in {'find_symbol','callers','callees','repo_map','sync','doctor','semantic_claim','semantic_submit'} or (name == 'search' and 'paths' not in args):
+        if name in {'find_symbol','callers','callees','repo_map','sync','reindex','doctor','semantic_claim','semantic_submit'} or (name == 'search' and 'paths' not in args):
             from . import skeleton, executor
             options = {k:v for k,v in args.items() if k != 'project'}
             if name in {'callers','callees'}:

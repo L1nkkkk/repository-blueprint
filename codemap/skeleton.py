@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS semantics (node_id TEXT NOT NULL REFERENCES nodes(id)
  detail TEXT NOT NULL, evidence TEXT NOT NULL, model TEXT, created_at TEXT NOT NULL,
  PRIMARY KEY(node_id,created_at));
 CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(node_id UNINDEXED,qualified_name,signature,summary);
+CREATE TABLE IF NOT EXISTS search_rows (rowid INTEGER PRIMARY KEY, node_id TEXT NOT NULL UNIQUE);
 CREATE TABLE IF NOT EXISTS semantic_tasks (node_id TEXT PRIMARY KEY REFERENCES nodes(id), body_sha TEXT NOT NULL,
  state TEXT NOT NULL, priority INTEGER NOT NULL, estimated_tokens INTEGER NOT NULL,
  lease_id TEXT, worker TEXT, expires_at REAL, generation INTEGER NOT NULL DEFAULT 0);
@@ -70,6 +71,10 @@ def initialize(store):
     with connection(store) as db:
         db.execute('PRAGMA journal_mode=WAL')
         db.executescript(SCHEMA)
+        # One-time rowid mapping for pre-scale databases; no FTS rebuild.
+        if not _meta(db, 'search_rows_version', 0):
+            db.execute('INSERT OR IGNORE INTO search_rows(rowid,node_id) SELECT rowid,node_id FROM search')
+            _save_meta(db, 'search_rows_version', 1)
 
 
 def _meta(db, key, default=None):
@@ -92,11 +97,36 @@ def _semantic(db, node):
     return row
 
 
+def update_search(db, node_ids):
+    """Point updates via an indexed node->FTS rowid map; never scan UNINDEXED node_id."""
+    for id in sorted(set(node_ids)):
+        slot = db.execute('SELECT rowid FROM search_rows WHERE node_id=?', (id,)).fetchone()
+        if slot:
+            db.execute('DELETE FROM search WHERE rowid=?', (slot[0],))
+        node = db.execute('SELECT id,qualified_name,signature FROM nodes WHERE id=?', (id,)).fetchone()
+        if node is None:
+            db.execute('DELETE FROM search_rows WHERE node_id=?', (id,))
+            continue
+        if not slot:
+            db.execute('INSERT INTO search_rows(node_id) VALUES (?)', (id,))
+            slot = db.execute('SELECT rowid FROM search_rows WHERE node_id=?', (id,)).fetchone()
+        summary = db.execute('SELECT summary FROM semantics WHERE node_id=? ORDER BY created_at DESC LIMIT 1', (id,)).fetchone()
+        db.execute('INSERT INTO search(rowid,node_id,qualified_name,signature,summary) VALUES (?,?,?,?,?)',
+                   (slot[0],id,node['qualified_name'],node['signature'],summary[0] if summary else ''))
+
+
 def refresh_search(db):
+    """Explicit repair only. Normal sync/submit must use update_search."""
     db.execute('DELETE FROM search')
-    db.execute('''INSERT INTO search SELECT n.id,n.qualified_name,n.signature,
-      coalesce((SELECT summary FROM semantics s WHERE s.node_id=n.id ORDER BY created_at DESC LIMIT 1),'')
-      FROM nodes n ORDER BY n.id''')
+    db.execute('DELETE FROM search_rows')
+    update_search(db, [r[0] for r in db.execute('SELECT id FROM nodes')])
+
+
+def reindex(store):
+    initialize(store)
+    with connection(store, write=True) as db:
+        refresh_search(db)
+        return {'reindexed_nodes':db.execute('SELECT count(*) FROM nodes').fetchone()[0]}
 
 
 def _resolve(db):
@@ -216,7 +246,6 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
         with connection(store,write=True) as db:
             require(_meta(db,'version',0)==previous_version,'Concurrent skeleton sync; retry')
             db.execute('UPDATE files SET commit_id=?',(commit,))
-            refresh_search(db)
             _save_meta(db,'budget_remaining',budget)
             _save_meta(db,'config',config)
             _save_meta(db,'version',previous_version+1)
@@ -228,7 +257,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
         require(_meta(db, 'version', 0) == previous_version, 'Concurrent skeleton sync; retry')
         old_nodes = {r['id']: json.loads(r['document']) for r in db.execute('SELECT id,document FROM nodes')}
         old_edges = [dict(r) for r in db.execute("SELECT * FROM edges WHERE kind='call'")]
-        new_nodes, contracts = {}, set()
+        new_nodes, contracts, fts_changed = {}, set(), set()
         for path, row in sorted(results.items()):
             s = sources[path]
             prior = old.get(path) or old.get(renamed.get(path))
@@ -276,6 +305,8 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
                 n = dict(n, file_id=file_id)
                 new_nodes[n['id']] = n
                 prev = old_nodes.get(n['id'])
+                if prev != n:
+                    fts_changed.add(n['id'])
                 if prev and prev['body_sha'] != n['body_sha']:
                     if prev.get('semantic_sha') == n.get('semantic_sha') or classification == 'cosmetic':
                         _rebind_cosmetic(db, prev, n)
@@ -329,7 +360,7 @@ def sync(store, *, budget=0, langs=None, include=None, workers=4):
             estimate = max(128, (len(n.get('source_text','').encode('utf-8')) + 2)//3 + 512)
             db.execute('INSERT OR IGNORE INTO semantic_tasks(node_id,body_sha,state,priority,estimated_tokens) VALUES (?,?,?,?,?)',
                        (n['id'],n['body_sha'],'queued',degree*10 - (1 if sem and sem['status']=='suspect' else 0),estimate))
-        refresh_search(db)
+        update_search(db, fts_changed | changed | suspect | deleted)
         _save_meta(db,'config',config)
         _save_meta(db,'root',str(root))
         _save_meta(db,'budget_remaining',budget)

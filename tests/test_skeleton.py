@@ -170,7 +170,7 @@ class SkeletonTests(unittest.TestCase):
         self.assertEqual(sk.sync(self.store)['parsed_files'],1)
         with sk.connection(self.store,write=True) as db:db.execute('DELETE FROM search')
         self.assertFalse(sk.doctor(self.store)['ok'])
-        sk.sync(self.store)
+        sk.reindex(self.store)
         self.file.unlink()
         sk.sync(self.store)
         self.assertEqual(sk.doctor(self.store)['nodes'],0)
@@ -278,6 +278,26 @@ class SkeletonTests(unittest.TestCase):
         with self.assertRaises(ProtocolError):
             ex.submit(self.store,{'batch_id':'evidence','results':[wrong]},now=13)
         ex.submit(self.store,{'batch_id':'recovered','results':[self.result(reclaimed)]},now=13)
+        self.assertTrue(sk.doctor(self.store)['ok'])
+
+
+    def test_fts_point_updates_and_explicit_repair(self):
+        with sk.connection(self.store) as db:
+            original={r['node_id']:r['rowid'] for r in db.execute('SELECT rowid,node_id FROM search')}
+        task=ex.claim(self.store,'fts')['tasks'][0]
+        with patch.object(sk,'refresh_search',side_effect=AssertionError('full rebuild')):
+            ex.submit(self.store,{'batch_id':'point','results':[self.result(task)]})
+            self.assertTrue(sk.search(self.store,'Computes')['symbols'])
+            self.file.write_text(self.code.replace('x + 1','x + 7'),encoding='utf-8')
+            sk.sync(self.store)
+            sk.sync(self.store)
+        with sk.connection(self.store) as db:
+            after={r['node_id']:r['rowid'] for r in db.execute('SELECT rowid,node_id FROM search')}
+        self.assertEqual(original,after)
+        with sk.connection(self.store,write=True) as db:db.execute('DELETE FROM search')
+        sk.sync(self.store)
+        self.assertFalse(sk.doctor(self.store)['ok'])
+        sk.reindex(self.store)
         self.assertTrue(sk.doctor(self.store)['ok'])
 
     def test_exact_utf8_spans(self):

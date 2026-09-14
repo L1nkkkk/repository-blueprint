@@ -32,7 +32,7 @@ def main(argv=None):
     init.add_argument('--budget', type=int, default=0)
     init.add_argument('--langs', help='Comma-separated languages')
     init.add_argument('--include', action='append')
-    for name in ('sync', 'doctor'):
+    for name in ('sync', 'doctor', 'reindex'):
         sub = commands.add_parser(name)
         sub.add_argument('project', type=Path)
         if name == 'sync':
@@ -131,9 +131,9 @@ def main(argv=None):
         else:
             store = open_project(args.project)
             graph = store.read()
-            if args.command in {'sync', 'doctor'}:
-                from .skeleton import sync, doctor
-                result = sync(store, budget=args.budget) if args.command == 'sync' else doctor(store)
+            if args.command in {'sync', 'doctor', 'reindex'}:
+                from .skeleton import sync, doctor, reindex
+                result = sync(store, budget=args.budget) if args.command == 'sync' else reindex(store) if args.command == 'reindex' else doctor(store)
             elif args.command == 'status':
                 result = status(store, check_snapshot=args.check_snapshot)
             elif args.command == 'metrics':
