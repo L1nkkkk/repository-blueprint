@@ -38,8 +38,9 @@ def mutate(path, spec, start, end):
         lines.insert(index, indent+'pass  # stage C body mutation\n')
     elif spec['kind']=='signature':
         for index in range(start-1,min(end,len(lines))):
-            if lines[index].lstrip().startswith('def is_subtype('):
-                lines[index]=lines[index].replace('):', ', _stage_c_marker=None):',1); break
+            if lines[index].strip()==') -> bool:':
+                lines[index]='    _stage_c_marker: object | None = None,\n'+lines[index]
+                break
     elif spec['kind']=='comment':
         lines.append('\n# stage C cosmetic comment\n')
     elif spec['kind']=='delete':
