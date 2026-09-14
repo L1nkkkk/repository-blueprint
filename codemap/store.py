@@ -38,12 +38,16 @@ class GraphStore:
         finally:
             db.close()
 
-    def initialize(self, graph):
+    def initialize(self, graph, *, legacy_cache=False):
         validate_graph(graph)
         with self._connection() as db:
             db.execute("BEGIN IMMEDIATE")
             require(db.execute("SELECT 1 FROM graph").fetchone() is None, "store already initialized")
             db.execute("INSERT INTO graph VALUES (1, ?)", (canonical(graph),))
+            if not legacy_cache:
+                # Keep the protocol graph for leases and durable findings, but
+                # never seed the legacy full-source snapshot implicitly.
+                db.execute("DELETE FROM source_texts")
 
     def read(self):
         with self._connection() as db:

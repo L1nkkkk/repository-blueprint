@@ -24,8 +24,13 @@ def initialize_project(root, output=None, *, excludes=(), budget=0, langs=None, 
     graph = scan_repository(root, excludes=patterns)
     output.mkdir(parents=True, exist_ok=True)
     store = GraphStore(output / 'map.sqlite')
-    store.initialize(graph)
-    store.save_source_texts(snapshot_texts(graph))
+    # The scaled skeleton reads source bytes from disk and verifies the file
+    # and node hashes at the point of use.  Keeping the old graph/source-text
+    # snapshots is an opt-in compatibility cache only; the default path must
+    # not duplicate the repository inside SQLite.
+    store.initialize(graph, legacy_cache=legacy_cache)
+    if legacy_cache:
+        store.save_source_texts(snapshot_texts(graph))
     from .skeleton import sync
     sync(store, budget=budget, langs=langs, include=include, legacy_cache=legacy_cache)
     return store

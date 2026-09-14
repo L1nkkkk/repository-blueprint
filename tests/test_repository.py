@@ -151,6 +151,16 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(snapshot_status(store.read())['state'],'current')
         self.assertEqual(open_project(self.root/'.codemap').read(),store.read())
 
+    def test_default_project_keeps_sources_on_disk_and_executor_reads_them(self):
+        self.write('a.py', 'def answer():\n    return 42\n')
+        store = initialize_project(self.root, budget=100000)
+        with store._connection() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM source_texts').fetchone()[0], 0)
+        from codemap.executor import claim
+        claimed = claim(store, 'disk-reader', n=1)
+        self.assertEqual(claimed['state'], 'claimed')
+        self.assertIn('return 42', claimed['tasks'][0]['source'])
+
     def test_snapshot_change_addition_deletion_are_reported(self):
         a=self.write('a.py','x=1');b=self.write('b.py','y=1')
         graph=scan_repository(self.root)

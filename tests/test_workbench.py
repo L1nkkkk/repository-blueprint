@@ -24,7 +24,9 @@ class WorkbenchTests(unittest.TestCase):
         self.base = Path(self.temp.name)
         self.root = self.base / 'repo'
         shutil.copytree(BASE / 'sample_repo', self.root)
-        self.store = initialize_project(self.root, self.base / 'map'); replay(self.store)
+        # History diff/restore explicitly exercises the compatibility snapshot
+        # cache; the scaled default path is covered by repository regressions.
+        self.store = initialize_project(self.root, self.base / 'map', legacy_cache=True); replay(self.store)
         self.before = self.store.read()
 
     def apply(self, renames=()):
